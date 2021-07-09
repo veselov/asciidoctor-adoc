@@ -1,0 +1,5 @@
+Gemfile.lock
+.idea
+.bundle
+test/out
+.*.swp

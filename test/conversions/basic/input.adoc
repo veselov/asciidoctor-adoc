@@ -1,0 +1,12 @@
+= Basic Test
+
+== Section
+
+Paragraph xref:input.adoc[] xref:input.adoc[Neat] https://github.com link:https://github.com[GitHub]
+
+* list.1
+* list.2
+** list.1.1
+** list.1.2
+* list.3
+

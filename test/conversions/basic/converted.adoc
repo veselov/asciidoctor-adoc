@@ -1,0 +1,73 @@
+
+= Basic Test
+:attribute-undefined:drop-line
+:attribute-missing:skip
+:appendix-caption:Appendix
+:appendix-refsig:Appendix
+:caution-caption:Caution
+:chapter-refsig:Chapter
+:example-caption:Example
+:figure-caption:Figure
+:important-caption:Important
+:last-update-label:Last updated
+:note-caption:Note
+:part-refsig:Part
+:prewrap:
+:sectids:
+:section-refsig:Section
+:table-caption:Table
+:tip-caption:Tip
+:toc-placement:auto
+:toc-title:Table of Contents
+:untitled-label:Untitled
+:version-label:Version
+:warning-caption:Warning
+:notitle:
+:docfile:input.adoc
+:docdir:
+:docfilesuffix:.adoc
+:docname:input
+:embedded:
+:asciidoctor:
+:asciidoctor-version:2.0.15
+:safe-mode-name:secure
+:safe-mode-secure:
+:safe-mode-level:20
+:max-include-depth:64
+:backend:adoc
+:user-home:.
+:max-attribute-value-size:4096
+:linkcss:
+:doctype:article
+:backend-adoc-doctype-article:
+:doctype-article:
+:backend-adoc:
+:outfilesuffix:.adoc
+:filetype:adoc
+:filetype-adoc:
+:basebackend-adoc-doctype-article:
+:basebackend-adoc:
+:basebackend:adoc
+:stylesdir:.
+:iconsdir:./images/icons
+:localdate:2021-07-09
+:localyear:2021
+:localtime:03:20:03 +0200
+:localdatetime:2021-07-09 03:20:03 +0200
+:docdate:2021-07-09
+:docyear:2021
+:doctime:03:11:19 +0200
+:docdatetime:2021-07-09 03:11:19 +0200
+:doctitle:Basic Test
+:authorcount:0
+
+Paragraph xref:input.adoc[,] xref:input.adoc[,Neat] link:https://github.com[,https://github.com,role="bare bare"] link:https://github.com[,,GitHub]
+
+
+* list.1
+* list.2
+** list.1.1
+** list.1.2
+
+* list.3
+
