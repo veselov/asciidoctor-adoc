@@ -1,3 +1,3 @@
-module AsciidoctorADoc
+module AsciidoctorAsciiDoc
   VERSION = "0.0.1.dev"
 end

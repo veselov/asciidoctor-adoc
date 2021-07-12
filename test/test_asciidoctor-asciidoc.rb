@@ -1,10 +1,10 @@
 require 'minitest/autorun'
 require 'asciidoctor'
-require 'asciidoctor-adoc'
+require 'asciidoctor-asciidoc'
 
 # credit: https://github.com/owenh000/asciidoctor-multipage/blob/master/test/test_asciidoctor-multipage.rb
 
-class AsciidoctorADocTest < Minitest::Test
+class AsciidoctorAsciiDocTest < Minitest::Test
   def test_conversions
     dir = 'test/conversions'
     update_files = ENV["ADC_UPDATE_FILES"].to_i
@@ -18,7 +18,7 @@ class AsciidoctorADocTest < Minitest::Test
                                      :to_file => true,
                                      :mkdirs => true,
                                      :header_footer => false,
-                                     :backend => 'adoc')
+                                     :backend => 'asciidoc')
       page_path_before = File.join(doc_path, 'converted.adoc')
       page_path_after = 'test/out/input.adoc'
       File.open(page_path_after) do |fa|

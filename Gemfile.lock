@@ -1,0 +1,30 @@
+PATH
+  remote: .
+  specs:
+    asciidoctor-asciidoc (0.0.1.dev)
+      asciidoctor (>= 2.0.11, < 2.1)
+
+GEM
+  remote: https://rubygems.org/
+  specs:
+    appraisal (2.4.0)
+      bundler
+      rake
+      thor (>= 0.14.0)
+    asciidoctor (2.0.15)
+    minitest (5.14.4)
+    rake (13.0.5)
+    thor (1.1.0)
+
+PLATFORMS
+  x86_64-linux
+
+DEPENDENCIES
+  appraisal
+  asciidoctor-asciidoc!
+  bundler (>= 2.2.18)
+  minitest (~> 5)
+  rake (~> 13)
+
+BUNDLED WITH
+   2.2.21

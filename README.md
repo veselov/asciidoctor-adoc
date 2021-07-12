@@ -1,6 +1,6 @@
-# Asciidoctor-aDoc
+# Asciidoctor-AsciiDoctor
 
-**This code is a WiP, and this point is just a joke**
+**This code is a WiP, and at this point is just a joke**
 
 An AsciiDoctor converter extension that converts AsciiDoc back to AsciiDoc text.
 
@@ -14,7 +14,7 @@ extension that I scavenged to bootstrap this workspace.
 ## Usage
 
 ```
-$ asciidoctor -r asciidoctor-adoc -b adoc \
+$ asciidoctor -r asciidoctor-asciidoc -b adoc \
     -D test/out test/black-box-docs/sample/sample.adoc
 ```
 
@@ -25,9 +25,9 @@ $ asciidoctor -r asciidoctor-adoc -b adoc \
 - To build the current version, run `bundler exec rake build`; the gem will be
   placed in the `pkg/` directory.
 - To release a new version:
-    1. update the date in `asciidoctor-adoc.gemspec`, remove `.dev` from the
-       version in `lib/asciidoctor-adoc/version.rb`, run `bundler lock`, and
+    1. update the date in `asciidoctor-asciidoc.gemspec`, remove `.dev` from the
+       version in `lib/asciidoctor-asciidoc/version.rb`, run `bundler lock`, and
        commit the changes;
     2. run `bundler exec rake release`; and
-    3. increment the version in `lib/asciidoctor-adoc/version.rb` (adding
+    3. increment the version in `lib/asciidoctor-asciidoc/version.rb` (adding
        `.dev`), run `bundler lock`, and commit the changes.

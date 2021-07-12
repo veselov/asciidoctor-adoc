@@ -1,22 +1,22 @@
 lib = File.expand_path("../lib", __FILE__)
 $LOAD_PATH.unshift(lib) unless $LOAD_PATH.include?(lib)
-require "asciidoctor-adoc/version"
+require "asciidoctor-asciidoc/version"
 
 Gem::Specification.new do |s|
   s.authors = ['Pawel S. Veselov']
   s.files = Dir['lib/*.rb']
-  s.name = 'asciidoctor-adoc'
-  s.summary = 'Asciidoctor ADoc converter'
-  s.version = AsciidoctorADoc::VERSION
+  s.name = 'asciidoctor-asciidoc'
+  s.summary = 'Asciidoctor AsciiDoc converter'
+  s.version = AsciidoctorAsciiDoc::VERSION
 
-  s.description = 'An Asciidoctor extension that generates ADoc output'
+  s.description = 'An Asciidoctor extension that generates AsciiDoc output'
   s.email = ['pawel.veselov@gmail.com']
-  s.homepage = 'https://github.com/veselov/asciidoctor-adoc'
+  s.homepage = 'https://github.com/veselov/asciidoctor-asciidoc'
   s.license = 'MIT'
   s.metadata = {
-    "bug_tracker_uri" => "https://github.com/veselov/asciidoctor-adoc/issues",
+    "bug_tracker_uri" => "https://github.com/veselov/asciidoctor-asciidoc/issues",
     "homepage_uri" => s.homepage,
-    "source_code_uri" => "https://github.com/veselov/asciidoctor-adoc/",
+    "source_code_uri" => "https://github.com/veselov/asciidoctor-asciidoc/",
   }
 
   s.add_development_dependency 'appraisal'
