@@ -1,0 +1,9 @@
+= Paragraphs
+
+[.lead]
+Leading (C) paragraph
+
+This is a (R) regular paragraph
+
+[.normal]
+Also a regular (TM) paragraph

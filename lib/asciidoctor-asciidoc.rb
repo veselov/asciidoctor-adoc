@@ -23,6 +23,9 @@ class AsciiDoctorAsciiDocConverter < Asciidoctor::Converter::Base
 
   RX_NUM = /^[1-9][0-9]*$/
 
+  EmDashCharRefRx = /&#8212;(?:&#8203;)?/
+
+
   LF = Asciidoctor::LF
 
   ANCHOR_ATTRIBUTES = [ATTR_ID, ATTR_ROLE, ATTR_WINDOW, ATTR_OPTS].to_set
@@ -76,7 +79,7 @@ class AsciiDoctorAsciiDocConverter < Asciidoctor::Converter::Base
     init_backend_traits basebackend: MY_BACKEND, filetype: MY_FILETYPE, outfilesuffix: MY_EXTENSION
   end
 
-  def convert_document node
+  def convert_document(node)
 
     doctype = node.doctype
 
@@ -89,19 +92,22 @@ class AsciiDoctorAsciiDocConverter < Asciidoctor::Converter::Base
       basebackend-#{MY_BACKEND}
     ).to_set
 
+    title = unescape(node.title)
+
     result = []
-    result << %(= #{node.title}) unless node.title.nil?
+    result << %(= #{title}) unless title.nil?
     node.attributes.each do |k,v|
       skip = -> {
         INTRINSIC_DOC_ATTRIBUTES.include?(k) ||
           dynamic_exclusions.include?(k) ||
           DEFAULT_DOC_ATTRIBUTES[k] == v ||
-          (k == ATTR_DOC_TITLE && v == node.title) ||
+          (k == ATTR_DOC_TITLE && v == title) ||
           (k == ATTR_ICONS_DIR && v == default_icons_dir(node))
       }
       result << %(:#{k}:#{v}) unless skip.call
     end
     result << ''
+
     node.blocks.each { |n| result << n.content }
     result.join LF
 
@@ -127,13 +133,13 @@ class AsciiDoctorAsciiDocConverter < Asciidoctor::Converter::Base
   def convert_block node
     out = ''
     out << %(#{node.style}: ) unless node.style.nil?
-    out << %(#{node.content}#{LF}#{LF})
+    out << %(#{unescape node.content}#{LF}#{LF})
   end
 
   def convert_list node
     out = ''
     node.items.each do |li|
-      out << li.marker << " " << li.text << LF
+      out << li.marker << " " << unescape(li.text) << LF
       out << li.content
     end
 
@@ -185,9 +191,14 @@ class AsciiDoctorAsciiDocConverter < Asciidoctor::Converter::Base
     'TODO'
   end
 
-  alias convert_paragraph convert_block
+  def convert_paragraph node
+      "ppp"
+      # %(#{LF}#{unescape node.content}brr#{LF})
+  end
 
-  alias convert_pass content_only
+  def convert_pass node
+    "TODO pass"
+  end
 
   def convert_preamble node
     'TODO'
@@ -247,7 +258,7 @@ class AsciiDoctorAsciiDocConverter < Asciidoctor::Converter::Base
   end
 
   def convert_inline_break node
-    %( +#{LF})
+    %(#{unescape node.text} +)
   end
 
   def convert_inline_button node
@@ -344,5 +355,31 @@ class AsciiDoctorAsciiDocConverter < Asciidoctor::Converter::Base
     end
   end
 
+  # taken from manify in
+  # https://github.com/asciidoctor/asciidoctor/blob/master/lib/asciidoctor/converter/manpage.rb
+  # Undo conversions done by AsciiDoctor according to:
+  # https://docs.asciidoctor.org/asciidoc/latest/subs/special-characters/#table-special
+  # https://docs.asciidoctor.org/asciidoc/latest/subs/replacements
+  def unescape(str)
+    return nil if str.nil?
+    str
+      .gsub('-', '-')
+      .gsub('&lt;', '<')
+      .gsub('&gt;', '>')
+      .gsub('&#43;', '+')       # plus sign; alternately could use \c(pl
+      .gsub('&#160;', '{nbsp}')     # non-breaking space # https://discuss.asciidoctor.org/Non-breaking-spaces-td2543.html
+      .gsub('&#169;', '(C)')   # copyright sign
+      .gsub('&#174;', '(R)')   # registered sign
+      .gsub('&#8482;', '(TM)')  # trademark sign
+      .gsub('&#8201;', ' ')     # thin space
+      .gsub(EmDashCharRefRx, '--') # em dash
+      .gsub('&#8592;', '<-')  # leftwards arrow
+      .gsub('&#8594;', '->')  # rightwards arrow
+      .gsub('&#8656;', '=>')  # leftwards double arrow
+      .gsub('&#8658;', '=>')  # rightwards double arrow
+      .gsub('&#8217;', '\'')    # typographic apostrophe
+      .gsub('&amp;', '&')       # literal ampersand (NOTE must take place after any other replacement that includes &)
+      .rstrip                   # strip trailing space
+  end
 
 end

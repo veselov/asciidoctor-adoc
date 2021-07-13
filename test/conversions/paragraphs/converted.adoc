@@ -1,0 +1,5 @@
+= Paragraphs
+
+Leading &#169; paragraph
+This is a &#174; regular paragraph
+Also a regular &#8482; paragraph

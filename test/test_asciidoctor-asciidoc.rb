@@ -8,10 +8,14 @@ class AsciidoctorAsciiDocTest < Minitest::Test
   def test_conversions
     dir = 'test/conversions'
     update_files = ENV["ADC_UPDATE_FILES"].to_i
+    run_only = ENV["ADC_RUN_ONLY"]
+    has_run = false
     Dir.foreach(dir) do |filename|
       next if filename == '.' or filename == '..'
       doc_path = File.join(dir, filename)
       next unless File.directory?(doc_path)
+      next unless run_only != nil && run_only == filename
+      has_run = true
       adoc_path = File.join(doc_path, 'input.adoc')
       Asciidoctor.convert_file(adoc_path,
                                      :to_dir => 'test/out',
@@ -33,5 +37,8 @@ class AsciidoctorAsciiDocTest < Minitest::Test
         end
       end
     end
+
+    assert run_only.nil? || has_run, "Specified test #{run_only} not found"
+
   end
 end
