@@ -1,11 +1,13 @@
 require 'minitest/autorun'
 require 'asciidoctor'
 require 'asciidoctor-asciidoc'
+require 'tmpdir'
 
 # credit: https://github.com/owenh000/asciidoctor-multipage/blob/master/test/test_asciidoctor-multipage.rb
 
 class AsciidoctorAsciiDocTest < Minitest::Test
   def test_conversions
+
     dir = 'test/conversions'
     update_files = ENV["ADC_UPDATE_FILES"].to_i
     run_only = ENV["ADC_RUN_ONLY"]
@@ -14,7 +16,8 @@ class AsciidoctorAsciiDocTest < Minitest::Test
       next if filename == '.' or filename == '..'
       doc_path = File.join(dir, filename)
       next unless File.directory?(doc_path)
-      next unless run_only != nil && run_only == filename
+      next unless run_only == nil || run_only == filename
+      printf(%(Testing #{filename}\n))
       has_run = true
       adoc_path = File.join(doc_path, 'input.adoc')
       Asciidoctor.convert_file(adoc_path,
@@ -36,9 +39,31 @@ class AsciidoctorAsciiDocTest < Minitest::Test
           end
         end
       end
+
+      # convert both documents to HTML, and see if they're equal
+      # supposedly, we don't need this if our converted .adoc are "correct"
+      # but this helps catch problems quicker
+      [adoc_path, page_path_before].each do |page|
+        Asciidoctor.convert_file(page,
+                                 :to_dir => 'test/out',
+                                 :to_file => true,
+                                 :mkdirs => true,
+                                 :header_footer => false,
+                                 :backend => 'html5')
+      end
+
+      page_path_before = 'test/out/input.html'
+      page_path_after = 'test/out/converted.html'
+      File.open(page_path_after) do |fa|
+        File.open(page_path_before) do |fb|
+          assert_equal fb.read, fa.read
+        end
+      end
+
+
     end
 
-    assert run_only.nil? || has_run, "Specified test #{run_only} not found"
+    assert has_run, "Specified test #{run_only} not found"
 
   end
 end

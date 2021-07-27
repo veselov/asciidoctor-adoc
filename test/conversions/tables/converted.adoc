@@ -1,0 +1,59 @@
+= Tables
+
+
+.styles
+[cols="1"]
+|===
+a|
+
+document|default
+e|emphasis
+h|header
+l|literal
+m|monospace
+s|strong
+|===
+
+
+[cols="1,1"]
+|===
+2*h|Cell in column 1, row 1
+2|Cell in column 1, row 2
+|Cell in column 1, row 3
+|Cell in column 2, row 3
+|===
+
+
+.aligns
+[cols="3*"]
+|===
+|left.top (defaults)
+>.>|right.bottom
+^.^|center.center
+|===
+
+
+[%header,cols="1,1a"]
+|===
+h|Column 1, header row
+d|Column 2, header row
+|Cell in column 1, row 2
+|:table-number:2
+
+
+Cell in column 2, row 2|Cell in column 1, row 3
+|:table-number:2
+
+
+Cell in column 2, row 3|===
+
+
+[format="csv"]
+|===
+h|Artist
+h|Track
+h|Genre
+|Baauer
+|Harlem Shake
+|Hip Hop
+|===

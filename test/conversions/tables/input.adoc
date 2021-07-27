@@ -1,0 +1,49 @@
+= Tables
+
+.styles
+[cols="1"]
+|===
+a|document
+d|default
+e|emphasis
+h|header
+l|literal
+m|monospace
+s|strong
+|===
+
+[cols="1,1"]
+|===
+2*a|Cell in column 1, row 1
+
+2+|Cell in column 1, row 2
+
+|Cell in column 1, row 3
+|Cell in column 2, row 3
+|===
+
+.aligns
+[cols="3*"]
+|===
+<.<|left.top (defaults)
+>.>|right.bottom
+^.^|center.center
+|===
+
+[cols="1,1a",options="header"]
+|===
+a|Column 1, header row
+|Column 2, header row
+
+|Cell in column 1, row 2
+|Cell in column 2, row 2
+
+|Cell in column 1, row 3
+|Cell in column 2, row 3
+|===
+
+,===
+Artist,Track,Genre
+
+Baauer,Harlem Shake,Hip Hop
+,===

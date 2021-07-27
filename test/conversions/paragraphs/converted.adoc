@@ -1,5 +1,15 @@
 = Paragraphs
 
-Leading &#169; paragraph
-This is a &#174; regular paragraph
-Also a regular &#8482; paragraph
+
+.titled
+[.titled]
+Am I still a paragraph, or a block?
+
+[.lead]
+Leading (C) paragraph
+
+[source#shoo.lead.text-center,ruby,]
+This is a (R) regular paragraph
+
+[.normal]
+Also a regular (TM) paragraph

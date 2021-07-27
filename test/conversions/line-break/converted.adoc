@@ -1,4 +1,5 @@
 = Don't break me
 
-Para with -> line +
-breaks &#8656; my heart
+
+Para with -> *line* +
+breaks => my heart

@@ -1,8 +1,13 @@
 = Paragraphs
 
+.titled
+[.titled]
+Am I still a paragraph, or a block?
+
 [.lead]
 Leading (C) paragraph
 
+[source.lead.text-center#shoo, ruby, ]
 This is a (R) regular paragraph
 
 [.normal]

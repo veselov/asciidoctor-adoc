@@ -1,0 +1,27 @@
+= Blame me
+:caution-caption:DANGER
+
+
+IMPORTANT: Do not become shark food
+
+.Feeding the Werewolves
+[IMPORTANT]
+====
+
+While werewolves are hardy community members, keep in mind the following dietary concerns:
+. They are allergic to cinnamon.
+. More than two glasses of orange juice in 24 hours makes them howl in harmony with alarms and sirens.
+. Celery makes them sad.
+
+====
+
+
+.fake
+CAUTION: tread lightly
+
+[.text-align-center]
+WARNING: Sharks ahead
+
+TIP: Boil the water first
+
+NOTE: Sharks may be mechanical
