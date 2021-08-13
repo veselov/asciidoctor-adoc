@@ -1,7 +1,8 @@
 # coding: utf-8
 
 require 'asciidoctor/converter'
-require 'conv-node'
+require 'asciidoctor-asciidoc/conv-node'
+require 'asciidoctor-asciidoc/linked-list'
 
 class AsciiDoctorAsciiDocConverter < Asciidoctor::Converter::Base
 
@@ -158,7 +159,7 @@ class AsciiDoctorAsciiDocConverter < Asciidoctor::Converter::Base
   end
 
   def convert(node, transform = node.node_name, opts = nil)
-    new_node = AsciiDoctorAsciiDocNode.new(@current_node, node, transform)
+    new_node = AsciiDoctorAsciiDocNode.new(parent: @current_node, node: node, transform: transform)
     old_node = @current_node
     @current_node.add_child(new_node) if @current_node
     @current_node = new_node
@@ -196,7 +197,7 @@ class AsciiDoctorAsciiDocConverter < Asciidoctor::Converter::Base
           (k == ATTR_DOC_TITLE && v == title) ||
           (k == ATTR_ICONS_DIR && v == default_icons_dir(node))
       }
-      result << %(:#{k}:#{v}) unless skip.call
+      result << %(:#{k}: #{v}) unless skip.call
     end
     result << ''
 
@@ -215,13 +216,7 @@ class AsciiDoctorAsciiDocConverter < Asciidoctor::Converter::Base
       result << %( #{node.title}#{LF}#{LF})
     end
 
-    # sections have no text, right?
-    node.blocks.each do |b|
-      out = b.content()
-      result << out
-    end
-
-    result
+    result << node.content
 
   end
 
@@ -231,7 +226,7 @@ class AsciiDoctorAsciiDocConverter < Asciidoctor::Converter::Base
     out << %(#{unescape node.content}#{LF}#{LF})
   end
 
-  def convert_list node
+  def convert_list(node)
 
     @current_node.is_list = true
 
@@ -242,8 +237,12 @@ class AsciiDoctorAsciiDocConverter < Asciidoctor::Converter::Base
     numeric = true
     contents=''
     node.items.each do |li|
-      contents << li.marker << " "
-      contents << my_mixed_content(li)
+
+      # this is likely unnecessary...
+      (sub, first_child) = @current_node.next_child { my_mixed_content(li) }
+      contents << li.marker << " " unless first_child&.is_list
+      contents << sub
+
       numeric = false if li.marker != "."
     end
 
@@ -398,7 +397,7 @@ class AsciiDoctorAsciiDocConverter < Asciidoctor::Converter::Base
       return target
     end
 
-    attrs[1] = title unless title.nil?
+    attrs[1] = title || ''
 
     if target == "#"
       target = File.basename(node.document.attr(ATTR_DOC_FILE))
@@ -530,6 +529,7 @@ class AsciiDoctorAsciiDocConverter < Asciidoctor::Converter::Base
 
       # deal with options
       attrs.clone.each do |attr, val|
+        attrs.delete(attr) if val.nil?
         next if attr.is_a?(Numeric)
         if attr.end_with?("-option") && val == ""
           attr1 << %(%#{attr[0..-8]})
@@ -622,16 +622,27 @@ class AsciiDoctorAsciiDocConverter < Asciidoctor::Converter::Base
     title = write_title(node.title)
     attrs = write_attributes(node.attributes, {OPT_FOR_BLOCK=>true}, config)
 
-    use_lf = get_config(CFG_NO_LF) ? '' : LF
+    # it's possible to not add LFs in certain cases, but for readability
+    # it's just simpler to add an LF any time there is a sibling.
+    need_lf = !@current_node.prev_sibling.nil?
 
-    %(#{use_lf}#{title}#{attrs})
+    # is that true? This means no starting LF if there are no siblings...
+    need_lf = false if need_lf.nil?
+
+    need_lf = need_lf ? LF : ''
+
+    %(#{need_lf}#{title}#{attrs})
   end
 
   def my_convert_paragraph(node, config)
 
-    content = node.blocks.nil? || node.blocks.empty? ?
-                unescape(config[:content].call(node)) :
-                %(#{config[:delimiter]}#{LF}#{node.content}#{config[CFG_DELIMITER]}#{LF})
+    if node.blocks.nil? || node.blocks.empty?
+      content = unescape(config[CFG_CONTENT].call(node))
+    else
+      push_config({CFG_NO_LF=>true})
+      content = %(#{config[CFG_DELIMITER]}#{LF}#{node.content}#{config[CFG_DELIMITER]}#{LF})
+      pop_config
+    end
 
     %(#{my_paragraph_header(node, config)}#{content})
   end
@@ -721,8 +732,22 @@ class AsciiDoctorAsciiDocConverter < Asciidoctor::Converter::Base
       end
 
       push_config({CFG_STYLE=>declared_style}) unless declared_style.nil?
-      out_cell[:out] << separator << my_mixed_content(cell)
+      content = cell.content
+      # we can get a string, or an array for table cells.
+      # I believe the array is the list of paragraphs, if there is ever more
+      # than one element.
+      out_cell[:out] << separator
+      if content.is_a?(Array)
+        out_cell[:out] << content.join(%(#{LF}#{LF}))
+      else
+        out_cell[:out] << content
+      end
       pop_config unless declared_style.nil?
+
+      # we have no idea how the cells were formatted in the original
+      # document, but it's safe to add an EOL after each cell
+      # will prevent overly long lines at least.
+      out_cell[:out] << LF
 
     end
 
@@ -765,20 +790,13 @@ class AsciiDoctorAsciiDocConverter < Asciidoctor::Converter::Base
   def my_mixed_content(node)
 
     out = ''
-    text = ''
-    text = node.text + LF if node.text
-    block_content = node.content
-    if block_content.is_a?(String)
-      out << block_content
-    elsif block_content.is_a?(Array)
-      block_content.each { |c| out << c << LF }
-    else
-      raise "Unexpected content type"
+    if node.text
+      text = unescape(node.text)
+      out << unescape(node.text) << LF
+      @current_node.add_text_child(text)
     end
 
-    out << text if out == ''
-
-    out
+    out << node.content
 
   end
 
@@ -808,6 +826,9 @@ class AsciiDoctorAsciiDocConverter < Asciidoctor::Converter::Base
   # https://docs.asciidoctor.org/asciidoc/latest/subs/replacements
   def unescape(str)
     return nil if str.nil?
+
+
+
     str
       .gsub('-', '-')
       .gsub('&lt;', '<')
@@ -821,7 +842,7 @@ class AsciiDoctorAsciiDocConverter < Asciidoctor::Converter::Base
       .gsub(EmDashCharRefRx, '--') # em dash
       .gsub('&#8592;', '<-')  # leftwards arrow
       .gsub('&#8594;', '->')  # rightwards arrow
-      .gsub('&#8656;', '=>')  # leftwards double arrow
+      .gsub('&#8656;', '<=')  # leftwards double arrow
       .gsub('&#8658;', '=>')  # rightwards double arrow
       .gsub('&#8217;', '\'')    # typographic apostrophe
       .gsub('&amp;', '&')       # literal ampersand (NOTE must take place after any other replacement that includes &)

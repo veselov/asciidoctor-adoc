@@ -8,7 +8,7 @@ Am I still a paragraph, or a block?
 [.lead]
 Leading (C) paragraph
 
-[source#shoo.lead.text-center,ruby,]
+[source#shoo.lead.text-center,ruby]
 This is a (R) regular paragraph
 
 [.normal]

@@ -43,23 +43,22 @@ class AsciidoctorAsciiDocTest < Minitest::Test
       # convert both documents to HTML, and see if they're equal
       # supposedly, we don't need this if our converted .adoc are "correct"
       # but this helps catch problems quicker
-      [adoc_path, page_path_before].each do |page|
-        Asciidoctor.convert_file(page,
-                                 :to_dir => 'test/out',
+      [[adoc_path, '1'], [page_path_after, '2']].each do |pi|
+        Asciidoctor.convert_file(pi[0],
+                                 :to_dir => %(test/out#{pi[1]}),
                                  :to_file => true,
                                  :mkdirs => true,
                                  :header_footer => false,
                                  :backend => 'html5')
       end
 
-      page_path_before = 'test/out/input.html'
-      page_path_after = 'test/out/converted.html'
+      page_path_before = 'test/out1/input.html'
+      page_path_after = 'test/out2/input.html'
       File.open(page_path_after) do |fa|
         File.open(page_path_before) do |fb|
           assert_equal fb.read, fa.read
         end
       end
-
 
     end
 
