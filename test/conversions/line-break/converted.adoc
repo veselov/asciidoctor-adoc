@@ -1,5 +1,4 @@
 = Don't break me
 
-
-Para with -> *line* +
+Para with -> pass:[*]line* +
 breaks <= my heart

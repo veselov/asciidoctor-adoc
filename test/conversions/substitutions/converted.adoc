@@ -1,0 +1,35 @@
+= Substitutions
+
+== https://docs.asciidoctor.org/asciidoc/latest/subs/special-characters/
+
+We have 2 < 3
+And 3 > 2
+And 3 & 2 = 2
+
+== https://docs.asciidoctor.org/asciidoc/latest/subs/quotes/
+
+* _word_
+* *word*
+* `word`
+* ^word^
+* ~word~
+* "`word`"
+* '`word`'
+
+== https://docs.asciidoctor.org/asciidoc/latest/subs/replacements/
+
+* (C) me
+* (R) where
+* (TM) but not for trade
+* a--b, but not a -- b
+* Tam-tam-tam...
+* Flash -> Gordon
+* Tomato => Potato
+* Left <- Right
+* How <= Now
+* Sam's gold reserve
+
+== Single quote madness
+
+Sam's in a pickle. '`wo'r'z
+d`'

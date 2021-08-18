@@ -11,11 +11,6 @@ class AsciiDoctorAsciiDocNode
   attr_reader :text
   attr_reader :type
 
-  # specifies whether the node has a "distinct end",
-  # meaning that there is no need to add an LF before
-  # starting the new node.
-  attr_reader :distinct_end
-
   attr_accessor :is_list
 
   def initialize(parent:, node: nil, transform: nil, text: nil)
@@ -24,7 +19,6 @@ class AsciiDoctorAsciiDocNode
     @node = node
     @transform = transform
     @text = text
-    @distinct_end = false
 
     if text.nil?
       @children = []

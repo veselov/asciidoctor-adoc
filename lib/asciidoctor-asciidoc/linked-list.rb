@@ -3,10 +3,19 @@ class LinkedList
   attr_reader :head
   attr_reader :tail
 
-  def initialize
-    super
+  def initialize(copy_from = nil, copy_fun = nil)
+    super()
     @head = nil
     @tail = nil
+
+    if copy_from
+      copy_from.each do |item|
+        contents = item.contents
+        contents = copy_fun.call(contents) if copy_fun
+        add(contents)
+      end
+    end
+
   end
 
   def add_after(el, contents)
@@ -27,36 +36,7 @@ class LinkedList
     add_between(nil, @head, contents)
   end
 
-  private
-
-  def add_between(e_prev, e_next, contents)
-
-    if contents.is_a?(LinkedListItem)
-      item = contents
-      raise "Attempting to add a list item that is already attached to a list" if item.list
-      item.list = self
-      item.next = e_next
-      item.prev = e_prev
-    else
-      item = LinkedListItem.new(contents, self, e_prev, e_next)
-    end
-
-    if e_prev.nil?
-      @head = item
-    else
-      e_prev.next = item
-    end
-
-    if e_next.nil?
-      @tail = item
-    else
-      e_next.prev = item
-    end
-
-  end
-
   def each
-
     return unless block_given?
     item = @head
     until item.nil?
@@ -65,7 +45,6 @@ class LinkedList
       yield item
       item = next_el
     end
-
   end
 
   def delete(item)
@@ -87,13 +66,41 @@ class LinkedList
     item.contents
   end
 
+  private
+
+  def add_between(e_prev, e_next, contents)
+
+    if contents.is_a?(LinkedListItem)
+      item = contents
+      raise "Attempting to add a list item that is already attached to a list" if item.list
+      item.list = self
+      item.next = e_next
+      item.prev = e_prev
+    else
+      item = LinkedListItem.new(contents, self, e_next, e_prev)
+    end
+
+    if e_prev.nil?
+      @head = item
+    else
+      e_prev.next = item
+    end
+
+    if e_next.nil?
+      @tail = item
+    else
+      e_next.prev = item
+    end
+
+  end
+
 end
 
 class LinkedListItem
 
   attr_accessor :next
   attr_accessor :prev
-  attr_reader :list
+  attr_accessor :list
   attr_accessor :contents
 
   def initialize(contents, list, next_item, prev_item)
@@ -115,7 +122,5 @@ class LinkedListItem
   def delete
     list.delete(self)
   end
-
-  protected
 
 end

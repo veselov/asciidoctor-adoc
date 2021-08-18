@@ -2,7 +2,7 @@
 
 require 'asciidoctor/converter'
 require 'asciidoctor-asciidoc/conv-node'
-require 'asciidoctor-asciidoc/linked-list'
+require 'asciidoctor-asciidoc/unescape'
 
 class AsciiDoctorAsciiDocConverter < Asciidoctor::Converter::Base
 
@@ -826,27 +826,7 @@ class AsciiDoctorAsciiDocConverter < Asciidoctor::Converter::Base
   # https://docs.asciidoctor.org/asciidoc/latest/subs/replacements
   def unescape(str)
     return nil if str.nil?
-
-
-
-    str
-      .gsub('-', '-')
-      .gsub('&lt;', '<')
-      .gsub('&gt;', '>')
-      .gsub('&#43;', '+')       # plus sign; alternately could use \c(pl
-      .gsub('&#160;', '{nbsp}')     # non-breaking space # https://discuss.asciidoctor.org/Non-breaking-spaces-td2543.html
-      .gsub('&#169;', '(C)')   # copyright sign
-      .gsub('&#174;', '(R)')   # registered sign
-      .gsub('&#8482;', '(TM)')  # trademark sign
-      .gsub('&#8201;', ' ')     # thin space
-      .gsub(EmDashCharRefRx, '--') # em dash
-      .gsub('&#8592;', '<-')  # leftwards arrow
-      .gsub('&#8594;', '->')  # rightwards arrow
-      .gsub('&#8656;', '<=')  # leftwards double arrow
-      .gsub('&#8658;', '=>')  # rightwards double arrow
-      .gsub('&#8217;', '\'')    # typographic apostrophe
-      .gsub('&amp;', '&')       # literal ampersand (NOTE must take place after any other replacement that includes &)
-      .rstrip                   # strip trailing space
+    Unescape.unescape(str)
   end
 
 end

@@ -62,7 +62,28 @@ class AsciidoctorAsciiDocTest < Minitest::Test
 
     end
 
-    assert has_run, "Specified test #{run_only} not found"
+    # assert has_run, "Specified test #{run_only} not found"
 
   end
+
+  def test_unescape
+
+    printf(%(Testing unescape\n))
+
+    instance = AsciiDoctorAsciiDocConverter.new(nil)
+    data = [
+      %w[*line* pass:[*]line*],
+      %w[X&#8217; X'],
+      %w[Don&#8217;t Don't],
+      %w[&#8217; '],
+      %w[Simple Simple],
+      %w(**** pass:[****])
+    ]
+
+    data.each do |item|
+      assert_equal item[1], instance.send(:unescape, item[0])
+    end
+
+  end
+
 end
