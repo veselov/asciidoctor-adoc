@@ -12,6 +12,7 @@
 * with things
 
 '''
+
 [.broken-list]
 . Protons
 . Electrons
@@ -52,13 +53,16 @@ Dairy::
 * Milk
 * Eggs
 Bakery::
+
 //-
 * Bread
 Produce::
+
 //-
 * Bananas
 
 '''
+
 .Parts of an atom
 [%reversed]
 . Protons

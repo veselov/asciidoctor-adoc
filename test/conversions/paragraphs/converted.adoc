@@ -1,6 +1,5 @@
 = Paragraphs
 
-
 .titled
 [.titled]
 Am I still a paragraph, or a block?

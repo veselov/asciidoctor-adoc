@@ -33,6 +33,10 @@ class AsciiDoctorAsciiDocNode
     @children.push(node)
   end
 
+  def parent_is_list?
+    @parent && @parent.is_list
+  end
+
   def prev_sibling
 
     return nil unless @parent

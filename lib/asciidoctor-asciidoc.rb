@@ -202,7 +202,12 @@ class AsciiDoctorAsciiDocConverter < Asciidoctor::Converter::Base
     result << ''
 
     result << node.content
-    result.join LF
+    result = result.join LF
+
+    if @current_node.parent.nil?
+      # be a good boy and add an EOL at the end
+      result << LF
+    end
 
   end
 
@@ -230,16 +235,16 @@ class AsciiDoctorAsciiDocConverter < Asciidoctor::Converter::Base
 
     @current_node.is_list = true
 
-    push_config({CFG_NO_LF=>true})
-
     cfg = PARAGRAPH_CONFIG
 
     numeric = true
     contents=''
     node.items.each do |li|
 
-      # this is likely unnecessary...
+      contents << LF unless contents.empty?
+
       (sub, first_child) = @current_node.next_child { my_mixed_content(li) }
+
       contents << li.marker << " " unless first_child&.is_list
       contents << sub
 
@@ -258,17 +263,7 @@ class AsciiDoctorAsciiDocConverter < Asciidoctor::Converter::Base
     end
 
     out = my_paragraph_header(node, cfg)
-    if out == ''
-      fore = @current_node.prev_sibling
-      if fore && (fore.is_list)
-        out << %(//-#{LF})
-      end
-    end
-    out << contents
-
-    pop_config
-
-    out
+    out << list_break(out) << contents
 
   end
 
@@ -284,18 +279,21 @@ class AsciiDoctorAsciiDocConverter < Asciidoctor::Converter::Base
     'TODO colist'
   end
 
-  def convert_dlist node
+  def convert_dlist(node)
 
     out = my_paragraph_header(node, PARAGRAPH_CONFIG)
+    out << list_break(out)
 
-    push_config({CFG_NO_LF=>true})
-
+    first = true
     node.items.each do |li|
+      if first
+        first = false
+      else
+        out << LF
+      end
       out << unescape(li[0][0].text) << '::' << LF
       out << my_mixed_content(li[1])
     end
-
-    pop_config
 
     out
   end
@@ -349,7 +347,7 @@ class AsciiDoctorAsciiDocConverter < Asciidoctor::Converter::Base
   end
 
   def convert_thematic_break node
-    %(''')
+    %(#{need_lf}''')
   end
 
   def convert_sidebar node
@@ -622,16 +620,26 @@ class AsciiDoctorAsciiDocConverter < Asciidoctor::Converter::Base
     title = write_title(node.title)
     attrs = write_attributes(node.attributes, {OPT_FOR_BLOCK=>true}, config)
 
+    %(#{need_lf}#{title}#{attrs})
+  end
+
+  def need_lf
     # it's possible to not add LFs in certain cases, but for readability
     # it's just simpler to add an LF any time there is a sibling.
-    need_lf = !@current_node.prev_sibling.nil?
+    # exceptions are:
+    # * parent node is a list
+    need_lf = !@current_node.prev_sibling.nil? && !@current_node.parent_is_list?
+    need_lf ? LF : ''
+  end
 
-    # is that true? This means no starting LF if there are no siblings...
-    need_lf = false if need_lf.nil?
-
-    need_lf = need_lf ? LF : ''
-
-    %(#{need_lf}#{title}#{attrs})
+  def list_break(out)
+    if out.strip.empty?
+      fore = @current_node.prev_sibling
+      if fore&.is_list
+        return %(//-#{LF})
+      end
+    end
+    ''
   end
 
   def my_convert_paragraph(node, config)
@@ -640,7 +648,7 @@ class AsciiDoctorAsciiDocConverter < Asciidoctor::Converter::Base
       content = unescape(config[CFG_CONTENT].call(node))
     else
       push_config({CFG_NO_LF=>true})
-      content = %(#{config[CFG_DELIMITER]}#{LF}#{node.content}#{config[CFG_DELIMITER]}#{LF})
+      content = %(#{config[CFG_DELIMITER]}#{LF}#{node.content.rstrip}#{LF}#{config[CFG_DELIMITER]}#{LF})
       pop_config
     end
 
@@ -792,11 +800,14 @@ class AsciiDoctorAsciiDocConverter < Asciidoctor::Converter::Base
     out = ''
     if node.text
       text = unescape(node.text)
-      out << unescape(node.text) << LF
+      out << text
       @current_node.add_text_child(text)
     end
 
-    out << node.content
+    sub = node.content
+
+    out << LF unless sub.empty? || out.empty?
+    out << sub
 
   end
 
