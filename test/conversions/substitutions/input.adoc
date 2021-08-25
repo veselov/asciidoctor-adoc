@@ -8,13 +8,14 @@ And 3 & 2 = 2
 
 == https://docs.asciidoctor.org/asciidoc/latest/subs/quotes/
 
-* _word_
-* *word*
-* `word`
-* ^word^
-* ~word~
-* "`word`"
-* '`word`'
+* #emphasized#
+* _italic_
+* *bold*
+* `monospace`
+* ^superscript^
+* ~subscript~
+* "`double-curved-quotes`"
+* '`single-curved-quotes`'
 
 == https://docs.asciidoctor.org/asciidoc/latest/subs/replacements/
 

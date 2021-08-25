@@ -6,17 +6,22 @@ require 'tmpdir'
 # credit: https://github.com/owenh000/asciidoctor-multipage/blob/master/test/test_asciidoctor-multipage.rb
 
 class AsciidoctorAsciiDocTest < Minitest::Test
+
+  def initialize(name)
+    super
+    @run_only = ENV["ADC_RUN_ONLY"]
+  end
+
   def test_conversions
 
     dir = 'test/conversions'
     update_files = ENV["ADC_UPDATE_FILES"].to_i
-    run_only = ENV["ADC_RUN_ONLY"]
     has_run = false
     Dir.foreach(dir) do |filename|
       next if filename == '.' or filename == '..'
       doc_path = File.join(dir, filename)
       next unless File.directory?(doc_path)
-      next unless run_only == nil || run_only == filename
+      next unless @run_only == nil || @run_only == filename
       printf(%(Testing #{filename}\n))
       has_run = true
       adoc_path = File.join(doc_path, 'input.adoc')
@@ -68,10 +73,12 @@ class AsciidoctorAsciiDocTest < Minitest::Test
 
   def test_unescape
 
-    printf(%(Testing unescape\n))
+    return if !@run_only.nil? && @run_only != "unescape"
 
     instance = AsciiDoctorAsciiDocConverter.new(nil)
     data = [
+      %w[a&#8212;&#8203;b a--b],
+      %w[&#8216;word&#8217; '`word`'],
       %w[*line* pass:[*]line*],
       %w[X&#8217; X'],
       %w[Don&#8217;t Don't],
@@ -81,7 +88,8 @@ class AsciidoctorAsciiDocTest < Minitest::Test
     ]
 
     data.each do |item|
-      assert_equal item[1], instance.send(:unescape, item[0])
+      assert_equal item[1], instance.send(:unescape, item[0], false)
+      assert_equal item[1], instance.send(:undo_escape, instance.send(:unescape, item[0], true))
     end
 
   end

@@ -12,6 +12,8 @@ class AsciiDoctorAsciiDocNode
   attr_reader :type
 
   attr_accessor :is_list
+  attr_accessor :is_anchor
+  attr_accessor :anchor
 
   def initialize(parent:, node: nil, transform: nil, text: nil)
     super()

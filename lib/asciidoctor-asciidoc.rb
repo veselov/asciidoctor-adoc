@@ -3,8 +3,11 @@
 require 'asciidoctor/converter'
 require 'asciidoctor-asciidoc/conv-node'
 require 'asciidoctor-asciidoc/unescape'
+require 'asciidoctor-asciidoc/const'
 
 class AsciiDoctorAsciiDocConverter < Asciidoctor::Converter::Base
+
+  include AsciiDoctorAsciiDocConst
 
   MY_BACKEND = "asciidoc"
   MY_FILETYPE = "asciidoc"
@@ -48,6 +51,21 @@ class AsciiDoctorAsciiDocConverter < Asciidoctor::Converter::Base
   TYPE_STRONG = :strong
   TYPE_SINGLE = :single
   TYPE_DOUBLE = :double
+  TYPE_MARK = :mark # italic
+  TYPE_SUBSCRIPT = :subscript # italic
+  TYPE_SUPERSCRIPT = :superscript # italic
+
+  ESC_INLINE_BRK = "#{ESC}2b#{ESC_E}" # +
+  ESC_HASH = "#{ESC}23#{ESC_E}" # #
+  ESC_BOLD = "#{ESC}2a2a#{ESC_E}" # **
+  ESC_MONO = "#{ESC}6060#{ESC_E}" # ``
+  ESC_START_SINGLE_QUOTE = "#{ESC}2760#{ESC_E}" # '`
+  ESC_END_SINGLE_QUOTE = "#{ESC}6027#{ESC_E}" # '`
+  ESC_START_DOUBLE_QUOTE = "#{ESC}2260#{ESC_E}" # '`
+  ESC_END_DOUBLE_QUOTE = "#{ESC}6022#{ESC_E}" # '`
+  ESC_ITALIC = "#{ESC}5f5f#{ESC_E}" # __
+  ESC_SUBSCRIPT = "#{ESC}7e#{ESC_E}" # ~
+  ESC_SUPERSCRIPT = "#{ESC}5e#{ESC_E}" # ^
 
   VALIGN_TOP = "top"
   VALIGN_BOTTOM = "bottom"
@@ -114,7 +132,7 @@ class AsciiDoctorAsciiDocConverter < Asciidoctor::Converter::Base
     htmlsyntax localdate localdatetime localtime localyear
     outdir outfile outfilesuffix safe-mode-level safe-mode-name
     safe-mode-unsafe safe-mode-safe safe-mode-server safe-mode-secure user-home
-    asciidoctor asciidoctor-version authorcount
+    asciidoctor asciidoctor-version authorcount table-number
   ).to_set
   # last line in INTRINSIC_DOC_ATTRIBUTES contains undocumented attributes
 
@@ -153,9 +171,10 @@ class AsciiDoctorAsciiDocConverter < Asciidoctor::Converter::Base
 
   def initialize(backend, opts = {})
     @backend = backend
-    init_backend_traits basebackend: MY_BACKEND, filetype: MY_FILETYPE, outfilesuffix: MY_EXTENSION
     @config = []
     @current_node = nil
+    @next_anchor = nil
+    init_backend_traits basebackend: MY_BACKEND, filetype: MY_FILETYPE, outfilesuffix: MY_EXTENSION
   end
 
   def convert(node, transform = node.node_name, opts = nil)
@@ -163,10 +182,17 @@ class AsciiDoctorAsciiDocConverter < Asciidoctor::Converter::Base
     old_node = @current_node
     @current_node.add_child(new_node) if @current_node
     @current_node = new_node
+    unless @next_anchor.nil?
+      @current_node.anchor = @next_anchor
+      @next_anchor = nil
+    end
     begin
       return super
     ensure
-      @current_node = old_node if old_node
+      if @current_node.is_anchor
+        @next_anchor = @current_node
+      end
+      @current_node = old_node
     end
   end
 
@@ -188,7 +214,7 @@ class AsciiDoctorAsciiDocConverter < Asciidoctor::Converter::Base
     title = unescape(node.title)
 
     result = []
-    result << %(= #{title}) unless title.nil?
+    result << %(= #{title}) << '' unless title.nil?
     node.attributes.each do |k,v|
       skip = -> {
         INTRINSIC_DOC_ATTRIBUTES.include?(k) ||
@@ -199,14 +225,15 @@ class AsciiDoctorAsciiDocConverter < Asciidoctor::Converter::Base
       }
       result << %(:#{k}: #{v}) unless skip.call
     end
-    result << ''
 
     result << node.content
     result = result.join LF
 
     if @current_node.parent.nil?
       # be a good boy and add an EOL at the end
-      result << LF
+      undo_escape(result.rstrip << LF)
+    else
+      undo_escape(result)
     end
 
   end
@@ -215,7 +242,7 @@ class AsciiDoctorAsciiDocConverter < Asciidoctor::Converter::Base
 
   def convert_section(node)
 
-    result=''
+    result = %(#{need_lf})
     unless node.title.nil?
       (0..node.level).each { result << '=' }
       result << %( #{node.title}#{LF}#{LF})
@@ -366,7 +393,8 @@ class AsciiDoctorAsciiDocConverter < Asciidoctor::Converter::Base
     # TODO: footer rows are of style "header", right?
     node.rows.foot.each { |row| out << my_table_row(node, row, TBL_STYLE_HEADER) }
 
-    out << %(|===#{LF})
+    # no terminating LF. This is because abstract_node joins with LF.
+    out << '|==='
 
   end
 
@@ -385,6 +413,7 @@ class AsciiDoctorAsciiDocConverter < Asciidoctor::Converter::Base
   end
 
   def convert_inline_anchor node
+
     title = choose node.text, node.attr(ATTR_TITLE), node.attr(1)
     attrs = node.attributes.clone.keep_if { |k| ANCHOR_ATTRIBUTES.include? k }
 
@@ -404,10 +433,12 @@ class AsciiDoctorAsciiDocConverter < Asciidoctor::Converter::Base
     out = %(#{node.type}:#{target})
     out << write_attributes(attrs, {:include_empty=>true})
 
+    @current_node.is_anchor = true
+
   end
 
   def convert_inline_break node
-    %(#{node.text} +)
+    %(#{node.text} ESC_INLINE_BRK)
   end
 
   def convert_inline_button node
@@ -448,19 +479,28 @@ class AsciiDoctorAsciiDocConverter < Asciidoctor::Converter::Base
       return text
     end
 
+    # $TODO: We are using unconstrained formatting pairs everywhere right now
+    # because it's somewhat complicated to ensure a constrained pair can be used.
+
     case node.type
     when TYPE_EMPHASIS # called "highlight" in docs
-      %(##{text}#)
+      %(#{ESC_ITALIC}#{text}#{ESC_ITALIC})
     when TYPE_STRONG # called "bold" in docs
-      %(**#{text}**)
+      %(#{ESC_BOLD}#{text}#{ESC_BOLD})
     when TYPE_MONOSPACE
-      %(``#{text}``)
+      %(#{ESC_MONO}#{text}#{ESC_MONO})
     when TYPE_LITERAL
       %(`+#{text}+`)
     when TYPE_SINGLE
-      %('`#{text}`')
+      %(#{ESC_START_SINGLE_QUOTE}#{text}#{ESC_END_SINGLE_QUOTE})
     when TYPE_DOUBLE
-      %("`#{text}`")
+      %(#{ESC_START_DOUBLE_QUOTE}#{text}#{ESC_END_DOUBLE_QUOTE})
+    when TYPE_MARK
+      %(#{ESC_HASH}#{text}#{ESC_HASH})
+    when TYPE_SUBSCRIPT
+      %(#{ESC_SUBSCRIPT}#{text}#{ESC_SUBSCRIPT})
+    when TYPE_SUPERSCRIPT
+      %(#{ESC_SUPERSCRIPT}#{text}#{ESC_SUPERSCRIPT})
     when TYPE_NONE
       text
     else
@@ -659,7 +699,7 @@ class AsciiDoctorAsciiDocConverter < Asciidoctor::Converter::Base
 
     # there isn't really a good way to reconstruct how the cells
     # were arranged. Because we force-set the header/footer style,
-    # we'll just use a cell/line output
+    # we'll just use a cell per line output
 
     # TODO: Support CSV/DSV/TSV formats
 
@@ -688,7 +728,7 @@ class AsciiDoctorAsciiDocConverter < Asciidoctor::Converter::Base
 
       out_cell[:out] << col_span.to_s if col_span > 1
       out_cell[:out] << '.' << row_span.to_s if row_span > 1
-      unless out == ''
+      unless out_cell[:out] == ''
         out_cell[:out] << '+'
         out_cell[:spans] = true
       end
@@ -744,6 +784,15 @@ class AsciiDoctorAsciiDocConverter < Asciidoctor::Converter::Base
       # we can get a string, or an array for table cells.
       # I believe the array is the list of paragraphs, if there is ever more
       # than one element.
+
+      # TODO There is a problem with trailing newlines. If the input has trailing
+      # newlines, (at least tested with '2*h' column), we don't seem to be able to
+      # determine that. However, Asciidoctor will wrap the inner contents in a <p>
+      # block if there is a newline, and will not wrap if there isn't. We always
+      # don't write the newline (because there is no reason to), causing difference
+      # in rendered output between the input and the converted documents. So for now
+      # tests have no empty lines between trivial table cells.
+
       out_cell[:out] << separator
       if content.is_a?(Array)
         out_cell[:out] << content.join(%(#{LF}#{LF}))
@@ -795,12 +844,41 @@ class AsciiDoctorAsciiDocConverter < Asciidoctor::Converter::Base
 
   end
 
+  # the reason we need this method is that, apparently, Asciidoctor
+  # re-processes returned converted text for more Asciidoctor processing,
+  # and we don't really know at the end how to unwind that. So, instead, we
+  # use special encoding to encode non-Asciidoctor characters in text. We now
+  # need to undo this.
+  def undo_escape(text)
+
+    out = ''
+    idx = 0
+    while true
+      next_idx = text[idx..-1].index(ESC)
+      if next_idx.nil?
+        out << text[idx..-1]
+        break
+      end
+      next_idx += idx
+      out << text[idx..next_idx-1] unless next_idx == idx
+      next_idx += 1
+      while text[next_idx] != ESC_E
+        out << (text[next_idx] + text[next_idx+1]).to_i(16).chr
+        next_idx += 2
+      end
+      idx = next_idx + 1
+    end
+
+    out
+
+  end
+
   def my_mixed_content(node)
 
     out = ''
-    if node.text
-      text = unescape(node.text)
-      out << text
+    text = node.text
+    if text
+      out << unescape(text)
       @current_node.add_text_child(text)
     end
 
@@ -835,9 +913,9 @@ class AsciiDoctorAsciiDocConverter < Asciidoctor::Converter::Base
   # Undo conversions done by AsciiDoctor according to:
   # https://docs.asciidoctor.org/asciidoc/latest/subs/special-characters/#table-special
   # https://docs.asciidoctor.org/asciidoc/latest/subs/replacements
-  def unescape(str)
+  def unescape(str, encode = true)
     return nil if str.nil?
-    Unescape.unescape(str)
+    Unescape.unescape(str, encode)
   end
 
 end

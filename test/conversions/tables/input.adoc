@@ -15,9 +15,7 @@ s|strong
 [cols="1,1"]
 |===
 2*a|Cell in column 1, row 1
-
 2+|Cell in column 1, row 2
-
 |Cell in column 1, row 3
 |Cell in column 2, row 3
 |===
@@ -41,9 +39,3 @@ a|Column 1, header row
 |Cell in column 1, row 3
 |Cell in column 2, row 3
 |===
-
-,===
-Artist,Track,Genre
-
-Baauer,Harlem Shake,Hip Hop
-,===

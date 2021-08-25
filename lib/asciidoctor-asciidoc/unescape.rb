@@ -1,7 +1,10 @@
 
 require 'asciidoctor-asciidoc/linked-list'
+require 'asciidoctor-asciidoc/const'
 
 class Unescape
+
+  include AsciiDoctorAsciiDocConst
 
   FEED_MORE = :more
   FEED_NO_MATCH = :no_match
@@ -16,14 +19,16 @@ class Unescape
     attr_accessor :pos
     attr_accessor :str
     attr_accessor :out
+    attr_reader :encode
 
-    def initialize(str)
+    def initialize(str, encode = false)
       super()
       @str = str
       @curve_quote_index = []
       @len = str.length
       @pos = 0
       @out = ''
+      @encode = encode
       reset
     end
 
@@ -69,6 +74,8 @@ class Unescape
 
   class Pattern
 
+    include AsciiDoctorAsciiDocConst
+
     attr_reader :len
 
     def initialize(context)
@@ -85,6 +92,25 @@ class Unescape
 
     def is_done?(ended)
       @done
+    end
+
+    def encode(piece)
+      r = produce(piece)
+      if @ctx.encode
+        encode_bin(r)
+      else
+        r
+      end
+    end
+
+    def encode_bin(text)
+      out = "#{ESC}"
+      text.each_char do |chr|
+        chr = chr.ord
+        raise "Non-ASCII character #{chr}" if chr > 255
+        out << ("%02x" % chr)
+      end
+      out << ESC_E
     end
 
   end
@@ -206,18 +232,18 @@ class Unescape
 
   end
 
-  def self.unescape(str)
+  def self.unescape(str, encode = false)
 
     # Note - it's generally OK for us to leave the &#xxxx; sequences in the
     # Asciidoc, because they are re-rendered as is. We try our best to resolve
     # these reference, but if we are unsure on how to, we can leave them in.
 
     # $TODO I'm sure there is more to this than that.
-    quote_release = Set[
-      ',', ';', '"', '.', '?', '!', ' ', '\n'
-    ]
+    # quote_release = Set[
+    #   ',', ';', '"', '.', '?', '!', ' ', '\n'
+    # ]
 
-    ctx = Context.new(str)
+    ctx = Context.new(str, encode)
 
     all = LinkedList.new
     # https://docs.asciidoctor.org/asciidoc/latest/subs/special-characters/
@@ -234,8 +260,10 @@ class Unescape
     all.add(StringPattern.new(ctx, "&#174;", "(R)"))
     all.add(StringPattern.new(ctx, "&#8482;", "(TM)"))
     all.add(StringPattern.new(ctx, "&#8212;", "--"))
+    all.add(StringPattern.new(ctx, "&#8212;&#8203;", "--"))
     all.add(StringPattern.new(ctx, "&#8201;&#8212;&#8201;", " -- "))
     all.add(StringPattern.new(ctx, "&#8230;", "..."))
+    all.add(StringPattern.new(ctx, "&#8230;&#8203;", "..."))
     all.add(StringPattern.new(ctx, "&#8594;", "->"))
     all.add(StringPattern.new(ctx, "&#8658;", "=>"))
     all.add(StringPattern.new(ctx, "&#8592;", "<-"))
@@ -270,7 +298,7 @@ class Unescape
           if done.nil?
             done = item
           else
-            if done.len > item.len
+            if done.contents.len > item.contents.len
               active.delete(item)
             else
               active.delete(done)
@@ -311,13 +339,15 @@ class Unescape
 
         # there is nothing done, so we just flush the
         # buffer out
+        # TODO: this should move to the next char, and not
+        # jump over the entire buffer.
         ctx.out << ctx.buffer
 
       else
 
         pattern = done.contents
         piece = ctx.back_track(pattern)
-        ctx.out << pattern.produce(piece)
+        ctx.out << pattern.encode(piece)
         ctx.forward(pattern)
 
       end
@@ -333,6 +363,7 @@ class Unescape
 
     # deal with apostrophes
     has_start = false
+    q_len = ctx.encode ? 6 : 2
     (0..ctx.curve_quote_index.length-1).each do |idx|
       item = ctx.curve_quote_index[idx]
 
@@ -341,7 +372,7 @@ class Unescape
       last_pos = item_pos
 
       if item[:start]
-        out2 << ctx.out[last_pos..last_pos+1]
+        out2 << ctx.out[last_pos..last_pos + q_len - 1]
         has_start = true
       else
         # ok, then this is the end quote,
@@ -352,19 +383,19 @@ class Unescape
         # if there is an end to it later, but before any new quote starts.
         replace = !has_start
         unless replace
-          replace = ctx.curve_quote_index-1 != idx && ctx.curve_quote_index[idx+1][:start]
+          replace = ctx.curve_quote_index.length-1 != idx && ctx.curve_quote_index[idx+1][:start]
         end
 
         if replace
-          out2 << "'"
+          out2 << (ctx.encode ? "#{ESC}27#{ESC_E}" : "'")
         else
           has_start = false
-          out2 << ctx.out[last_pos..last_pos+1]
+          out2 << (ctx.out[last_pos..last_pos + q_len - 1])
         end
 
       end
 
-      last_pos += 2
+      last_pos += q_len
 
     end
 
