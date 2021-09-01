@@ -214,17 +214,19 @@ class AsciiDoctorAsciiDocConverter < Asciidoctor::Converter::Base
     title = unescape(node.title)
 
     result = []
-    result << %(= #{title}) << '' unless title.nil?
+    result << %(= #{title}) unless title.nil?
     node.attributes.each do |k,v|
       skip = -> {
         INTRINSIC_DOC_ATTRIBUTES.include?(k) ||
           dynamic_exclusions.include?(k) ||
           DEFAULT_DOC_ATTRIBUTES[k] == v ||
-          (k == ATTR_DOC_TITLE && v == title) ||
+          (k == ATTR_DOC_TITLE && v == undo_escape(title)) ||
           (k == ATTR_ICONS_DIR && v == default_icons_dir(node))
       }
       result << %(:#{k}: #{v}) unless skip.call
     end
+
+    result << '' unless result.empty?
 
     result << node.content
     result = result.join LF
@@ -435,10 +437,12 @@ class AsciiDoctorAsciiDocConverter < Asciidoctor::Converter::Base
 
     @current_node.is_anchor = true
 
+    return out
+
   end
 
   def convert_inline_break node
-    %(#{node.text} ESC_INLINE_BRK)
+    %(#{node.text} #{ESC_INLINE_BRK})
   end
 
   def convert_inline_button node
