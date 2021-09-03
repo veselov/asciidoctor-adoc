@@ -1,0 +1,12 @@
+= Images
+
+Click image:../image.jpg[] to get the party started.
+
+image::../image.jpg[Sunset,300,400]
+
+image::../image.jpg[title=Red]
+
+[#red-image]
+image::../image.jpg[title=Red]
+
+image::../image.jpg[title=Red,id=id-here]

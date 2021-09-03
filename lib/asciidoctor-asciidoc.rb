@@ -33,6 +33,19 @@ class AsciiDoctorAsciiDocConverter < Asciidoctor::Converter::Base
   ATTR_SEPARATOR = "separator"
   ATTR_VALIGN = "valign"
   ATTR_HALIGN = "halign"
+  ATTR_ALT = "alt"
+  ATTR_FALLBACK = "fallback"
+  ATTR_FORMAT = "format"
+  ATTR_CAPTION = "caption"
+  ATTR_WIDTH = "width"
+  ATTR_HEIGHT = "height"
+  ATTR_LINK = "link"
+  ATTR_SCALE = "scale"
+  ATTR_SCALED_WIDTH = "scaledwidth"
+  ATTR_PDF_WIDTH = "pdfwidth"
+  ATTR_ALIGN = "align"
+  ATTR_FLOAT = "float"
+  ATTR_TARGET = "target"
 
   TBL_STYLE_HEADER = "h"
 
@@ -73,6 +86,7 @@ class AsciiDoctorAsciiDocConverter < Asciidoctor::Converter::Base
 
   CFG_NO_LF = :no_new_line
   CFG_COLLAPSE = :collapse
+  CFG_KNOWN_ATTRS = :known_attr
   CFG_CONTENT = :content
   CFG_DELIMITER = :delimiter
   CFG_DEFAULT_ATTR = :default_attr
@@ -80,6 +94,23 @@ class AsciiDoctorAsciiDocConverter < Asciidoctor::Converter::Base
 
   OPT_INCLUDE_EMPTY = :include_empty
   OPT_FOR_BLOCK = :for_block
+
+  ROLE_BARE = "bare"
+
+  RX_NUM = /^[1-9][0-9]*$/
+
+  EmDashCharRefRx = /&#8212;(?:&#8203;)?/
+
+  LF = Asciidoctor::LF
+
+  ANCHOR_ATTRIBUTES = [ATTR_ID, ATTR_ROLE, ATTR_WINDOW, ATTR_OPTS].to_set
+  BLOCK_IMAGE_ATTRIBUTES = [ATTR_ALT, ATTR_FALLBACK, ATTR_TITLE,
+                            ATTR_FORMAT, ATTR_CAPTION, ATTR_WIDTH, ATTR_HEIGHT,
+                            ATTR_LINK, ATTR_WINDOW, ATTR_SCALE, ATTR_SCALED_WIDTH,
+                            ATTR_PDF_WIDTH, ATTR_ALIGN, ATTR_FLOAT, ATTR_ROLE,
+                            ATTR_OPTS].to_set
+
+  INLINE_IMAGE_ATTRIBUTES = BLOCK_IMAGE_ATTRIBUTES.clone << ATTR_ID
 
   PARAGRAPH_CONFIG = {
     CFG_COLLAPSE => { ATTR_STYLE => 1, ATTR_TITLE => 0},
@@ -95,14 +126,25 @@ class AsciiDoctorAsciiDocConverter < Asciidoctor::Converter::Base
 
   ADMONITION_CONFIG = PARAGRAPH_CONFIG.merge(
     {
-       CFG_COLLAPSE => PARAGRAPH_CONFIG[CFG_COLLAPSE].merge({
-             ATTR_STYLE=>0,
-             ATTR_NAME=>0,
-             ATTR_TEXT_LABEL=>0 # name and text label are not documented, so
-             # I assume it's OK to throw them out...
-           }),
-       CFG_CONTENT => -> (node) { %(#{node.attr(ATTR_STYLE)}: #{node.content}) }
+      CFG_COLLAPSE => PARAGRAPH_CONFIG[CFG_COLLAPSE].merge({
+                                                             ATTR_STYLE=>0,
+                                                             ATTR_NAME=>0,
+                                                             ATTR_TEXT_LABEL=>0 # name and text label are not documented, so
+                                                             # I assume it's OK to throw them out...
+                                                           }),
+      CFG_CONTENT => -> (node) { %(#{node.attr(ATTR_STYLE)}: #{node.content}) }
     })
+
+  INLINE_IMAGE_CONFIG = {
+    CFG_COLLAPSE => { ATTR_ALT=>1, ATTR_WIDTH=>2, ATTR_HEIGHT=>3},
+    CFG_KNOWN_ATTRS => INLINE_IMAGE_ATTRIBUTES,
+    CFG_DEFAULT_ATTR => { ATTR_ALT => 'image' }
+  }
+
+  BLOCK_IMAGE_CONFIG = INLINE_IMAGE_CONFIG.merge({
+    CFG_COLLAPSE => INLINE_IMAGE_CONFIG[CFG_COLLAPSE].merge({ ATTR_ID=>0, ATTR_TITLE=>0 }),
+    CFG_KNOWN_ATTRS => BLOCK_IMAGE_ATTRIBUTES,
+  })
 
   TABLE_CONFIG = PARAGRAPH_CONFIG.merge(
     {
@@ -114,16 +156,6 @@ class AsciiDoctorAsciiDocConverter < Asciidoctor::Converter::Base
           ATTR_TABLE_PC_WIDTH=>0,
         }),
     })
-
-  ROLE_BARE = "bare"
-
-  RX_NUM = /^[1-9][0-9]*$/
-
-  EmDashCharRefRx = /&#8212;(?:&#8203;)?/
-
-  LF = Asciidoctor::LF
-
-  ANCHOR_ATTRIBUTES = [ATTR_ID, ATTR_ROLE, ATTR_WINDOW, ATTR_OPTS].to_set
 
   # https://docs.asciidoctor.org/asciidoc/latest/attributes/document-attributes-reference/
   INTRINSIC_DOC_ATTRIBUTES = %w(
@@ -441,6 +473,12 @@ class AsciiDoctorAsciiDocConverter < Asciidoctor::Converter::Base
 
   end
 
+  def convert_image(node)
+    title = write_title(node.title)
+    id = write_id(node.id)
+    %(#{need_lf}#{title}#{id}image::#{node.attributes[ATTR_TARGET]}#{write_attributes(node.attributes, {OPT_INCLUDE_EMPTY=>true}, BLOCK_IMAGE_CONFIG)})
+  end
+
   def convert_inline_break node
     %(#{node.text} #{ESC_INLINE_BRK})
   end
@@ -458,7 +496,7 @@ class AsciiDoctorAsciiDocConverter < Asciidoctor::Converter::Base
   end
 
   def convert_inline_image node
-    'TODO inline_image'
+    %(image:#{node.target}#{write_attributes(node.attributes, {OPT_INCLUDE_EMPTY=>true}, INLINE_IMAGE_CONFIG)})
   end
 
   def convert_inline_indexterm node
@@ -519,6 +557,11 @@ class AsciiDoctorAsciiDocConverter < Asciidoctor::Converter::Base
     ''
   end
 
+  def write_id(id)
+    return %([##{id}]#{LF}) if id
+    ''
+  end
+
   def default_icons_dir node
     images_dir = node.attributes[ATTR_IMAGES_DIR]
     return './images/icons' if images_dir.nil? || "" == images_dir
@@ -548,6 +591,10 @@ class AsciiDoctorAsciiDocConverter < Asciidoctor::Converter::Base
 
     defaults = config[CFG_DEFAULT_ATTR]
     defaults = {} unless defaults
+
+    known = config[CFG_KNOWN_ATTRS]
+
+    attrs = attrs.clone.keep_if { |k| (known.include? k) || k.is_a?(Numeric) } if known
 
     unless attrs.nil?
 
@@ -639,7 +686,7 @@ class AsciiDoctorAsciiDocConverter < Asciidoctor::Converter::Base
     list.pop while !list.nil? && !list.empty? && list[-1].nil?
 
     if list.nil? || list.empty?
-      opts[OPT_INCLUDE_EMPTY] ? "[]" : ""
+      return opts[OPT_INCLUDE_EMPTY] ? "[]" : ""
     else
       first = true
       list.each do |item|
@@ -662,9 +709,10 @@ class AsciiDoctorAsciiDocConverter < Asciidoctor::Converter::Base
   def my_paragraph_header(node, config)
 
     title = write_title(node.title)
+    id = write_id(node.title)
     attrs = write_attributes(node.attributes, {OPT_FOR_BLOCK=>true}, config)
 
-    %(#{need_lf}#{title}#{attrs})
+    %(#{need_lf}#{title}#{id}#{attrs})
   end
 
   def need_lf

@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    asciidoctor-asciidoc (0.0.1.dev)
+    asciidoctor-asciidoc (0.0.2.dev)
       asciidoctor (>= 2.0.11, < 2.1)
 
 GEM
@@ -22,9 +22,9 @@ PLATFORMS
 DEPENDENCIES
   appraisal
   asciidoctor-asciidoc!
-  bundler (>= 2.2.18)
+  bundler (~> 2.2.18)
   minitest (~> 5)
   rake (~> 13)
 
 BUNDLED WITH
-   2.2.21
+   2.2.25

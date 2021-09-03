@@ -4,7 +4,7 @@ require "asciidoctor-asciidoc/version"
 
 Gem::Specification.new do |s|
   s.authors = ['Pawel S. Veselov']
-  s.files = Dir['lib/*.rb']
+  s.files = Dir['lib/*.rb'] + Dir['lib/asciidoctor-asciidoc/*.rb']
   s.name = 'asciidoctor-asciidoc'
   s.summary = 'Asciidoctor AsciiDoc converter'
   s.version = AsciidoctorAsciiDoc::VERSION
@@ -20,7 +20,7 @@ Gem::Specification.new do |s|
   }
 
   s.add_development_dependency 'appraisal'
-  s.add_development_dependency 'bundler', '>= 2.2.18'
+  s.add_development_dependency 'bundler', '~> 2.2.18'
   s.add_development_dependency 'minitest', '~> 5'
   s.add_development_dependency 'rake', '~> 13'
   s.add_runtime_dependency 'asciidoctor', '>= 2.0.11', '< 2.1'
