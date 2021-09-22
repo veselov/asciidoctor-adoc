@@ -91,6 +91,8 @@ class AsciiDoctorAsciiDocConverter < Asciidoctor::Converter::Base
   CFG_DELIMITER = :delimiter
   CFG_DEFAULT_ATTR = :default_attr
   CFG_STYLE = :style
+  CFG_UNKNOWN_ATTR = :unknown_attr
+  CFG_NEED_DELIMITER = :need_delimiter
 
   OPT_INCLUDE_EMPTY = :include_empty
   OPT_FOR_BLOCK = :for_block
@@ -118,6 +120,9 @@ class AsciiDoctorAsciiDocConverter < Asciidoctor::Converter::Base
     CFG_DELIMITER => "===="
   }
 
+  LITERAL_CONFIG = PARAGRAPH_CONFIG.merge(
+    { CFG_DELIMITER => "...." })
+
   LISTING_CONFIG = PARAGRAPH_CONFIG.merge(
     {
       CFG_COLLAPSE => PARAGRAPH_CONFIG[CFG_COLLAPSE].merge({ATTR_LANGUAGE=>2}),
@@ -132,7 +137,6 @@ class AsciiDoctorAsciiDocConverter < Asciidoctor::Converter::Base
                                                              ATTR_TEXT_LABEL=>0 # name and text label are not documented, so
                                                              # I assume it's OK to throw them out...
                                                            }),
-      CFG_CONTENT => -> (node) { %(#{node.attr(ATTR_STYLE)}: #{node.content}) }
     })
 
   INLINE_IMAGE_CONFIG = {
@@ -329,7 +333,9 @@ class AsciiDoctorAsciiDocConverter < Asciidoctor::Converter::Base
   end
 
   def convert_admonition(node)
-    my_convert_paragraph(node, ADMONITION_CONFIG)
+    cfg = ADMONITION_CONFIG
+    cfg = cfg.merge({CFG_CONTENT => -> (node) { %(#{node.attr(ATTR_STYLE)}: #{node.content}) }}) if node.blocks.empty?
+    my_convert_paragraph(node, cfg)
   end
 
   def convert_audio node
@@ -372,7 +378,14 @@ class AsciiDoctorAsciiDocConverter < Asciidoctor::Converter::Base
   end
 
   def convert_literal(node)
-    %(`$#{node.text}`)
+    # this is for literal blocks, not inline
+    # $TODO: Literal blocks can start with a leading space,
+    # in which case the block is just indented with a (single) space.
+    # However, that requires a bit of special handling, and for now
+    # these will be just wrapped in (....)
+    cfg = LITERAL_CONFIG
+    cfg = cfg.merge({CFG_UNKNOWN_ATTR => true, CFG_NEED_DELIMITER => true}) unless node.style == 'literal'
+    my_convert_paragraph(node, cfg)
   end
 
   def convert_stem node
@@ -650,7 +663,7 @@ class AsciiDoctorAsciiDocConverter < Asciidoctor::Converter::Base
             end
           end
 
-          if key.is_a?(Numeric)
+          if key.is_a?(Numeric) && config[CFG_UNKNOWN_ATTR] != true
             raise %(Positional key #{key} with value #{val} does not translate into named attribute!)
           end
 
@@ -672,7 +685,6 @@ class AsciiDoctorAsciiDocConverter < Asciidoctor::Converter::Base
         end
       end
 
-
       named.each do |n|
         i = list.index(nil)
         if i.nil?
@@ -683,6 +695,7 @@ class AsciiDoctorAsciiDocConverter < Asciidoctor::Converter::Base
       end
     end
 
+    # remove any trailing NIL elements from the list
     list.pop while !list.nil? && !list.empty? && list[-1].nil?
 
     if list.nil? || list.empty?
@@ -709,10 +722,9 @@ class AsciiDoctorAsciiDocConverter < Asciidoctor::Converter::Base
   def my_paragraph_header(node, config)
 
     title = write_title(node.title)
-    id = write_id(node.title)
     attrs = write_attributes(node.attributes, {OPT_FOR_BLOCK=>true}, config)
 
-    %(#{need_lf}#{title}#{id}#{attrs})
+    %(#{need_lf}#{title}#{attrs})
   end
 
   def need_lf
@@ -736,15 +748,21 @@ class AsciiDoctorAsciiDocConverter < Asciidoctor::Converter::Base
 
   def my_convert_paragraph(node, config)
 
-    if node.blocks.nil? || node.blocks.empty?
-      content = unescape(config[CFG_CONTENT].call(node))
+    header = my_paragraph_header(node, config)
+
+    if !node.blocks&.empty? || config[CFG_NEED_DELIMITER]
+      del = %(#{config[CFG_DELIMITER]})
     else
-      push_config({CFG_NO_LF=>true})
-      content = %(#{config[CFG_DELIMITER]}#{LF}#{node.content.rstrip}#{LF}#{config[CFG_DELIMITER]}#{LF})
-      pop_config
+      del = nil
     end
 
-    %(#{my_paragraph_header(node, config)}#{content})
+    push_config({CFG_NO_LF=>true}) unless del.nil?
+    content = unescape(config[CFG_CONTENT].call(node))
+    pop_config unless del.nil?
+
+    content = %(#{del}#{LF}#{content&.rstrip}#{LF}#{del}) unless del.nil?
+
+    %(#{header}#{content})
   end
 
   def my_table_row(node, row, style="")
