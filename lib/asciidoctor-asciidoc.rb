@@ -641,7 +641,7 @@ class AsciiDoctorAsciiDocConverter < Asciidoctor::Converter::Base
       # deal with options
       attrs.clone.each do |attr, val|
         attrs.delete(attr) if val.nil?
-        next if attr.is_a?(Numeric)
+        next unless attr.is_a?(String)
         if attr.end_with?("-option") && val == ""
           attr1 << %(%#{attr[0..-8]})
           attrs.delete(attr)
