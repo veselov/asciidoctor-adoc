@@ -67,6 +67,7 @@ class AsciiDoctorAsciiDocConverter < Asciidoctor::Converter::Base
   TYPE_MARK = :mark # italic
   TYPE_SUBSCRIPT = :subscript # italic
   TYPE_SUPERSCRIPT = :superscript # italic
+  TYPE_ASCII_MATH = :asciimath
 
   ESC_INLINE_BRK = "#{ESC}2b#{ESC_E}" # +
   ESC_HASH = "#{ESC}23#{ESC_E}" # #
@@ -259,7 +260,11 @@ class AsciiDoctorAsciiDocConverter < Asciidoctor::Converter::Base
           (k == ATTR_DOC_TITLE && v == undo_escape(title)) ||
           (k == ATTR_ICONS_DIR && v == default_icons_dir(node))
       }
-      result << %(:#{k}: #{v}) unless skip.call
+      unless skip.call
+        item = %(:#{k}:)
+        item = %(#{item} #{v}) unless v.nil? or v.empty?
+        result << item
+      end
     end
 
     result << '' unless result.empty?
@@ -558,6 +563,8 @@ class AsciiDoctorAsciiDocConverter < Asciidoctor::Converter::Base
       %(#{ESC_SUBSCRIPT}#{text}#{ESC_SUBSCRIPT})
     when TYPE_SUPERSCRIPT
       %(#{ESC_SUPERSCRIPT}#{text}#{ESC_SUPERSCRIPT})
+    when TYPE_ASCII_MATH
+      %(stem:[#{text}])
     when TYPE_NONE
       text
     else

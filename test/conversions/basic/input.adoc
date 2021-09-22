@@ -1,4 +1,5 @@
 = Basic Test
+:stem:
 
 == Section
 
@@ -17,3 +18,5 @@ Literal block #1
  Literal block #2
 
 === Update *** search indexes
+
+Fetch me a stem:[Δ]
