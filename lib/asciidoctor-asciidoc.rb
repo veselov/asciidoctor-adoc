@@ -528,9 +528,11 @@ class AsciiDoctorAsciiDocConverter < Asciidoctor::Converter::Base
 
     text = unescape(node.text)
 
-    # if implicit style matches the style here, just return the text.
+    # NOTE: if implicit style matches the style here, just return the text.
     # this is used for table cells.
-    if get_config(CFG_STYLE) == node.type
+    # NOTE: When text is quoted in titles, we are called even
+    # before the document conversion begins, so there is no config, etc.
+    if !@config.empty? && get_config(CFG_STYLE) == node.type
       return text
     end
 
@@ -963,10 +965,9 @@ class AsciiDoctorAsciiDocConverter < Asciidoctor::Converter::Base
 
     if @config.length == 0
       @config = [obj]
-      return
+    else
+      @config.push(@config.last.merge(obj))
     end
-
-    @config.push(@config.last.merge(obj))
 
   end
 

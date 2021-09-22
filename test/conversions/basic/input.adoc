@@ -15,3 +15,5 @@ digraph G {Hello->World}
 Literal block #1
 
  Literal block #2
+
+=== Update *** search indexes
