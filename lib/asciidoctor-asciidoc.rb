@@ -46,6 +46,7 @@ class AsciiDoctorAsciiDocConverter < Asciidoctor::Converter::Base
   ATTR_ALIGN = "align"
   ATTR_FLOAT = "float"
   ATTR_TARGET = "target"
+  ATTR_REFTEXT = "reftext"
 
   TBL_STYLE_HEADER = "h"
 
@@ -68,6 +69,7 @@ class AsciiDoctorAsciiDocConverter < Asciidoctor::Converter::Base
   TYPE_SUBSCRIPT = :subscript # italic
   TYPE_SUPERSCRIPT = :superscript # italic
   TYPE_ASCII_MATH = :asciimath
+  TYPE_REF = :ref
 
   ESC_INLINE_BRK = "#{ESC}2b#{ESC_E}" # +
   ESC_HASH = "#{ESC}23#{ESC_E}" # #
@@ -119,6 +121,15 @@ class AsciiDoctorAsciiDocConverter < Asciidoctor::Converter::Base
     CFG_COLLAPSE => { ATTR_STYLE => 1, ATTR_TITLE => 0},
     CFG_CONTENT => -> (node) { node.content },
     CFG_DELIMITER => "===="
+  }
+
+  SECTION_CONFIG = {
+    CFG_COLLAPSE => { },
+    OPT_FOR_BLOCK => true
+  }
+
+  ANCHOR_CONFIG = {
+    CFG_COLLAPSE => { ATTR_ID => 1, ATTR_REFTEXT => 2 }
   }
 
   LITERAL_CONFIG = PARAGRAPH_CONFIG.merge(
@@ -285,7 +296,7 @@ class AsciiDoctorAsciiDocConverter < Asciidoctor::Converter::Base
 
   def convert_section(node)
 
-    result = %(#{need_lf})
+    result = %(#{need_lf}#{write_attributes(node.attributes, SECTION_CONFIG)})
     unless node.title.nil?
       (0..node.level).each { result << '=' }
       result << %( #{node.title}#{LF}#{LF})
@@ -466,6 +477,13 @@ class AsciiDoctorAsciiDocConverter < Asciidoctor::Converter::Base
 
   def convert_inline_anchor node
 
+    if node.type == TYPE_REF
+      out = %([[#{node.id})
+      out << %(,#{node.text}) if node.text
+      @current_node.skip_lf = true
+      return out << "]]"
+    end
+
     title = choose node.text, node.attr(ATTR_TITLE), node.attr(1)
     attrs = node.attributes.clone.keep_if { |k| ANCHOR_ATTRIBUTES.include? k }
 
@@ -483,7 +501,7 @@ class AsciiDoctorAsciiDocConverter < Asciidoctor::Converter::Base
     end
 
     out = %(#{node.type}:#{target})
-    out << write_attributes(attrs, {:include_empty=>true})
+    out << write_attributes(attrs, {OPT_INCLUDE_EMPTY=>true})
 
     @current_node.is_anchor = true
 
@@ -741,7 +759,9 @@ class AsciiDoctorAsciiDocConverter < Asciidoctor::Converter::Base
     # it's just simpler to add an LF any time there is a sibling.
     # exceptions are:
     # * parent node is a list
-    need_lf = !@current_node.prev_sibling.nil? && !@current_node.parent_is_list?
+    need_lf = !@current_node.prev_sibling.nil? &&
+      !@current_node.parent_is_list? &&
+      !@current_node.prev_sibling.skip_lf
     need_lf ? LF : ''
   end
 

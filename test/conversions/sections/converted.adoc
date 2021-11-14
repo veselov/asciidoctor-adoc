@@ -1,0 +1,18 @@
+= Sections
+
+[#ref-me]
+== Some Section
+
+This section is intentionally left blank
+
+[#primary-id]
+== [[secondary-id,caput]][[tertiary-id,draconis]]Caput Draconis
+
+Gryffindor common room, book 1
+
+[#primary-id2]
+== Sherbet Lemon[[secondary-id2]][[tertiary-id2]]
+
+Dumbledore's office password, book 6
+
+Section reference: xref:#ref-me[]

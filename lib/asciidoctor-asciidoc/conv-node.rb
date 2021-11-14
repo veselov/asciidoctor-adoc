@@ -12,6 +12,9 @@ class AsciiDoctorAsciiDocNode
   attr_reader :type
 
   attr_accessor :is_list
+  # set by nodes that aren't rendered as true children,
+  # so the next sibling doesn't need a leading LF
+  attr_accessor :skip_lf
   attr_accessor :is_anchor
   attr_accessor :anchor
 
