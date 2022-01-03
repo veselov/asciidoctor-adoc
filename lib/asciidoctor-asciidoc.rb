@@ -535,7 +535,7 @@ class AsciiDoctorAsciiDocConverter < Asciidoctor::Converter::Base
   end
 
   def convert_inline_button node
-    'TODO inline_button'
+    %(btn:[#{node.text}])
   end
 
   def convert_inline_callout node
