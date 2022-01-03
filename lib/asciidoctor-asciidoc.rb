@@ -51,6 +51,8 @@ class AsciiDoctorAsciiDocConverter < Asciidoctor::Converter::Base
   TBL_STYLE_HEADER = "h"
 
   STYLE_ARABIC = "arabic"
+  STYLE_LISTING = "listing"
+  STYLE_LITERAL = "literal"
 
   HALIGN_LEFT = "left"
   HALIGN_RIGHT = "right"
@@ -103,6 +105,9 @@ class AsciiDoctorAsciiDocConverter < Asciidoctor::Converter::Base
   OPT_INCLUDE_EMPTY = :include_empty
   OPT_FOR_BLOCK = :for_block
 
+  DEL_LITERAL = "...."
+  DEL_LISTING = "----"
+
   ROLE_BARE = "bare"
 
   RX_NUM = /^[1-9][0-9]*$/
@@ -136,12 +141,12 @@ class AsciiDoctorAsciiDocConverter < Asciidoctor::Converter::Base
   }
 
   LITERAL_CONFIG = PARAGRAPH_CONFIG.merge(
-    { CFG_DELIMITER => "...." })
+    { CFG_DELIMITER => DEL_LITERAL })
 
   LISTING_CONFIG = PARAGRAPH_CONFIG.merge(
     {
       CFG_COLLAPSE => PARAGRAPH_CONFIG[CFG_COLLAPSE].merge({ATTR_LANGUAGE=>2}),
-      CFG_DELIMITER => "----"
+      CFG_DELIMITER => DEL_LISTING
     })
 
   ADMONITION_CONFIG = PARAGRAPH_CONFIG.merge(
@@ -796,17 +801,20 @@ class AsciiDoctorAsciiDocConverter < Asciidoctor::Converter::Base
 
   def my_convert_paragraph(node, config)
 
-    header = my_paragraph_header(node, config)
-    force_delim = false
+    use_delim = !node.blocks&.empty? || config[CFG_NEED_DELIMITER]
 
     content = unescape(config[CFG_CONTENT].call(node))
-    @current_node.each_children do |child|
-      if child.node&.context == CTX_CALLOUT
-        force_delim = true
-        break
+
+    unless use_delim
+      @current_node.each_children do |child|
+        if child.node&.context == CTX_CALLOUT
+          use_delim = true
+          break
+        end
       end
     end
-    if !force_delim && content
+
+    if !use_delim && content
       lines = content.split(LF)
       lines.each_with_index do |line, i|
         # TODO empty lines require a delimiter, but also
@@ -815,20 +823,48 @@ class AsciiDoctorAsciiDocConverter < Asciidoctor::Converter::Base
         # if it has 4 first characters to be the same and
         # are not whitespaces. Separators are only problematic
         # at the top
-        if line == '' || (i==0 && /^\s\s\s\s/.match?(line))
-          force_delim = true
-          break
+
+        use_delim = true if line == ''
+        if !use_delim && line.length > 3
+          c = nil
+          use_delim = true
+          line.each_char.with_index do |chr, j|
+            if j == 0
+              c = chr
+            elsif j < 4
+              if chr != c
+                use_delim = false
+                break
+              end
+            else
+              break
+            end
+          end
         end
+
+        break if use_delim
+
       end
     end
 
-    if force_delim || !node.blocks&.empty? || config[CFG_NEED_DELIMITER]
+    if use_delim
       del = %(#{config[CFG_DELIMITER]})
       @current_node.ok_no_lf = true
+      def_style =
+        case del
+        when DEL_LISTING
+          STYLE_LISTING
+        when DEL_LITERAL
+          STYLE_LITERAL
+        else
+          nil
+        end
+      config = config.merge({CFG_DEFAULT_ATTR=>{ATTR_STYLE => def_style}}) if def_style
     else
       del = nil
     end
 
+    header = my_paragraph_header(node, config)
     content = %(#{del}#{LF}#{content&.rstrip}#{LF}#{del}) unless del.nil?
 
     %(#{header}#{content})
