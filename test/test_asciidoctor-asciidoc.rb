@@ -88,8 +88,8 @@ class AsciidoctorAsciiDocTest < Minitest::Test
     ]
 
     data.each do |item|
-      assert_equal item[1], instance.send(:unescape, item[0], false)
-      assert_equal item[1], instance.send(:undo_escape, instance.send(:unescape, item[0], true))
+      assert_equal item[1], Unescape.unescape(item[0], false)
+      assert_equal item[1], Unescape.undo_escape(Unescape.unescape(item[0], true))
     end
 
   end

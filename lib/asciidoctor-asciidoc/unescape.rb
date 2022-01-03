@@ -232,7 +232,7 @@ class Unescape
 
   end
 
-  def self.unescape(str, encode = false)
+  def self.unescape(str, encode = false, literal = false)
 
     # Note - it's generally OK for us to leave the &#xxxx; sequences in the
     # Asciidoc, because they are re-rendered as is. We try our best to resolve
@@ -269,7 +269,7 @@ class Unescape
     all.add(StringPattern.new(ctx, "&#8592;", "<-"))
     all.add(StringPattern.new(ctx, "&#8656;", "<="))
 
-    all.add(SpecialGobbler.new(ctx))
+    all.add(SpecialGobbler.new(ctx)) unless literal
 
     active = nil
 
@@ -402,6 +402,27 @@ class Unescape
     return ctx.out if last_pos == 0
     out2 << ctx.out[last_pos..-1]
 
+  end
+
+  def self.undo_escape(text)
+    out = ''
+    idx = 0
+    while true
+      next_idx = text[idx..-1].index(ESC)
+      if next_idx.nil?
+        out << text[idx..-1]
+        break
+      end
+      next_idx += idx
+      out << text[idx..next_idx-1] unless next_idx == idx
+      next_idx += 1
+      while text[next_idx] != ESC_E
+        out << (text[next_idx] + text[next_idx+1]).to_i(16).chr
+        next_idx += 2
+      end
+      idx = next_idx + 1
+    end
+    out
   end
 
 end

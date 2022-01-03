@@ -101,6 +101,7 @@ class AsciiDoctorAsciiDocConverter < Asciidoctor::Converter::Base
   CFG_UNKNOWN_ATTR = :unknown_attr
   CFG_NEED_DELIMITER = :need_delimiter
   CFG_WANT_NO_LF = :want_no_lf
+  CFG_PRE = :pre # preformatted contents
 
   OPT_INCLUDE_EMPTY = :include_empty
   OPT_FOR_BLOCK = :for_block
@@ -112,7 +113,7 @@ class AsciiDoctorAsciiDocConverter < Asciidoctor::Converter::Base
 
   RX_NUM = /^[1-9][0-9]*$/
 
-  EmDashCharRefRx = /&#8212;(?:&#8203;)?/
+  EM_DASH_CHAR_REF_RX = /&#8212;(?:&#8203;)?/
 
   LF = Asciidoctor::LF
 
@@ -126,6 +127,7 @@ class AsciiDoctorAsciiDocConverter < Asciidoctor::Converter::Base
   INLINE_IMAGE_ATTRIBUTES = BLOCK_IMAGE_ATTRIBUTES.clone << ATTR_ID
 
   PARAGRAPH_CONFIG = {
+    CFG_PRE => false,
     CFG_COLLAPSE => { ATTR_STYLE => 1, ATTR_TITLE => 0},
     CFG_CONTENT => -> (node) { node.content },
     CFG_DELIMITER => "===="
@@ -141,10 +143,14 @@ class AsciiDoctorAsciiDocConverter < Asciidoctor::Converter::Base
   }
 
   LITERAL_CONFIG = PARAGRAPH_CONFIG.merge(
-    { CFG_DELIMITER => DEL_LITERAL })
+    {
+      CFG_PRE => true,
+      CFG_DELIMITER => DEL_LITERAL
+    })
 
   LISTING_CONFIG = PARAGRAPH_CONFIG.merge(
     {
+      CFG_PRE => true,
       CFG_COLLAPSE => PARAGRAPH_CONFIG[CFG_COLLAPSE].merge({ATTR_LANGUAGE=>2}),
       CFG_DELIMITER => DEL_LISTING
     })
@@ -270,7 +276,7 @@ class AsciiDoctorAsciiDocConverter < Asciidoctor::Converter::Base
     title = unescape(node.title)
 
     result = []
-    result << %(= #{title}) unless title.nil?
+    result << %(= #{title}) unless title == ''
     node.attributes.each do |k,v|
       skip = -> {
         INTRINSIC_DOC_ATTRIBUTES.include?(k) ||
@@ -803,7 +809,8 @@ class AsciiDoctorAsciiDocConverter < Asciidoctor::Converter::Base
 
     use_delim = !node.blocks&.empty? || config[CFG_NEED_DELIMITER]
 
-    content = unescape(config[CFG_CONTENT].call(node))
+    content = config[CFG_CONTENT].call(node)
+    content = unescape(content, config[CFG_PRE])
 
     unless use_delim
       @current_node.each_children do |child|
@@ -1025,27 +1032,7 @@ class AsciiDoctorAsciiDocConverter < Asciidoctor::Converter::Base
   # use special encoding to encode non-Asciidoctor characters in text. We now
   # need to undo this.
   def undo_escape(text)
-
-    out = ''
-    idx = 0
-    while true
-      next_idx = text[idx..-1].index(ESC)
-      if next_idx.nil?
-        out << text[idx..-1]
-        break
-      end
-      next_idx += idx
-      out << text[idx..next_idx-1] unless next_idx == idx
-      next_idx += 1
-      while text[next_idx] != ESC_E
-        out << (text[next_idx] + text[next_idx+1]).to_i(16).chr
-        next_idx += 2
-      end
-      idx = next_idx + 1
-    end
-
-    out
-
+    Unescape.undo_escape(text)
   end
 
   def my_mixed_content(node)
@@ -1087,9 +1074,9 @@ class AsciiDoctorAsciiDocConverter < Asciidoctor::Converter::Base
   # Undo conversions done by AsciiDoctor according to:
   # https://docs.asciidoctor.org/asciidoc/latest/subs/special-characters/#table-special
   # https://docs.asciidoctor.org/asciidoc/latest/subs/replacements
-  def unescape(str, encode = true)
-    return nil if str.nil?
-    Unescape.unescape(str, encode)
+  def unescape(str, literal = false)
+    return '' if str.nil?
+    Unescape.unescape(str, true, literal)
   end
 
 end
