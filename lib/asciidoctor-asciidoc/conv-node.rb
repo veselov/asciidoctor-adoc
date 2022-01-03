@@ -15,6 +15,7 @@ class AsciiDoctorAsciiDocNode
   # set by nodes that aren't rendered as true children,
   # so the next sibling doesn't need a leading LF
   attr_accessor :skip_lf
+  attr_accessor :ok_no_lf
   attr_accessor :is_anchor
   attr_accessor :anchor
 
@@ -40,6 +41,14 @@ class AsciiDoctorAsciiDocNode
 
   def parent_is_list?
     @parent && @parent.is_list
+  end
+
+  def each_children
+    return unless block_given?
+    children&.each do |child|
+      yield child
+      child.each_children { |c| yield c }
+    end
   end
 
   def prev_sibling

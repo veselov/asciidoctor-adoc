@@ -72,6 +72,7 @@ class AsciiDoctorAsciiDocConverter < Asciidoctor::Converter::Base
   TYPE_REF = :ref
 
   CTX_COLIST = :colist
+  CTX_CALLOUT = :callout
 
   ESC_INLINE_BRK = "#{ESC}2b#{ESC_E}" # +
   ESC_HASH = "#{ESC}23#{ESC_E}" # #
@@ -89,7 +90,6 @@ class AsciiDoctorAsciiDocConverter < Asciidoctor::Converter::Base
   VALIGN_BOTTOM = "bottom"
   VALIGN_CENTER = "middle"
 
-  CFG_NO_LF = :no_new_line
   CFG_COLLAPSE = :collapse
   CFG_KNOWN_ATTRS = :known_attr
   CFG_CONTENT = :content
@@ -98,6 +98,7 @@ class AsciiDoctorAsciiDocConverter < Asciidoctor::Converter::Base
   CFG_STYLE = :style
   CFG_UNKNOWN_ATTR = :unknown_attr
   CFG_NEED_DELIMITER = :need_delimiter
+  CFG_WANT_NO_LF = :want_no_lf
 
   OPT_INCLUDE_EMPTY = :include_empty
   OPT_FOR_BLOCK = :for_block
@@ -351,6 +352,8 @@ class AsciiDoctorAsciiDocConverter < Asciidoctor::Converter::Base
                       })
     end
 
+    cfg = cfg.merge({CFG_WANT_NO_LF=>true}) if callouts
+
     out = my_paragraph_header(node, cfg)
     out << list_break(out) << contents
 
@@ -366,14 +369,11 @@ class AsciiDoctorAsciiDocConverter < Asciidoctor::Converter::Base
     'TODO audio'
   end
 
-  def convert_colist node
+  def convert_colist(node)
     # list of callouts
     # callouts must be in strict order (1..n), AsciiDoc doesn't tolerate gaps
-    # TODO: callouts are just lists that apply to previous paragraph, which
+    # callouts are just lists that apply to previous paragraph, which
     # should be a something that contains callouts.
-    # Also, for callouts, delimiting the previous para would have made a lot of sense
-    # but we would need to know that the next block is COLIST, to force the delimiters,
-    # and we don't do that now.
     convert_list(node)
   end
 
@@ -766,17 +766,21 @@ class AsciiDoctorAsciiDocConverter < Asciidoctor::Converter::Base
     title = write_title(node.title)
     attrs = write_attributes(node.attributes, {OPT_FOR_BLOCK=>true}, config)
 
-    %(#{need_lf}#{title}#{attrs})
+    %(#{need_lf(config[CFG_WANT_NO_LF])}#{title}#{attrs})
   end
 
-  def need_lf
+  def need_lf(want_none=false)
     # it's possible to not add LFs in certain cases, but for readability
     # it's just simpler to add an LF any time there is a sibling.
     # exceptions are:
     # * parent node is a list
-    need_lf = !@current_node.prev_sibling.nil? &&
-      !@current_node.parent_is_list? &&
-      !@current_node.prev_sibling.skip_lf
+
+    prev = @current_node.prev_sibling
+
+    need_lf = !prev.nil? && !@current_node.parent_is_list? && !prev.skip_lf
+
+    need_lf = false if need_lf && want_none && prev&.ok_no_lf
+
     need_lf ? LF : ''
   end
 
@@ -793,16 +797,37 @@ class AsciiDoctorAsciiDocConverter < Asciidoctor::Converter::Base
   def my_convert_paragraph(node, config)
 
     header = my_paragraph_header(node, config)
+    force_delim = false
 
-    if !node.blocks&.empty? || config[CFG_NEED_DELIMITER]
+    content = unescape(config[CFG_CONTENT].call(node))
+    @current_node.each_children do |child|
+      if child.node&.context == CTX_CALLOUT
+        force_delim = true
+        break
+      end
+    end
+    if !force_delim && content
+      lines = content.split(LF)
+      lines.each_with_index do |line, i|
+        # TODO empty lines require a delimiter, but also
+        # paragraph delimiters, if present. As a simple
+        # fix, we just consider the line to be a separator
+        # if it has 4 first characters to be the same and
+        # are not whitespaces. Separators are only problematic
+        # at the top
+        if line == '' || (i==0 && /^\s\s\s\s/.match?(line))
+          force_delim = true
+          break
+        end
+      end
+    end
+
+    if force_delim || !node.blocks&.empty? || config[CFG_NEED_DELIMITER]
       del = %(#{config[CFG_DELIMITER]})
+      @current_node.ok_no_lf = true
     else
       del = nil
     end
-
-    push_config({CFG_NO_LF=>true}) unless del.nil?
-    content = unescape(config[CFG_CONTENT].call(node))
-    pop_config unless del.nil?
 
     content = %(#{del}#{LF}#{content&.rstrip}#{LF}#{del}) unless del.nil?
 

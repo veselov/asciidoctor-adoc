@@ -12,3 +12,13 @@ This is a (R) regular paragraph
 
 [.normal]
 Also a regular (TM) paragraph
+
+[literal]
+----
+UPDATE 73 <1>
+
+--------------------
+
+DELETE 1
+----
+<1> delete me
