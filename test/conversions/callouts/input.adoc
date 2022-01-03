@@ -1,0 +1,11 @@
+= Callouts
+
+[source,java]
+try {
+    <1>
+} catch (Exception e) {
+    <2>
+}
+
+<1> tried code
+<2> execute on caught exception

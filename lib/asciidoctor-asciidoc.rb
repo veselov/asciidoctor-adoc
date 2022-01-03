@@ -71,6 +71,8 @@ class AsciiDoctorAsciiDocConverter < Asciidoctor::Converter::Base
   TYPE_ASCII_MATH = :asciimath
   TYPE_REF = :ref
 
+  CTX_COLIST = :colist
+
   ESC_INLINE_BRK = "#{ESC}2b#{ESC_E}" # +
   ESC_HASH = "#{ESC}23#{ESC_E}" # #
   ESC_BOLD = "#{ESC}2a2a#{ESC_E}" # **
@@ -320,20 +322,26 @@ class AsciiDoctorAsciiDocConverter < Asciidoctor::Converter::Base
 
     numeric = true
     contents=''
+    n = 0
+    callouts = node.context == CTX_COLIST
     node.items.each do |li|
 
       contents << LF unless contents.empty?
 
       (sub, first_child) = @current_node.next_child { my_mixed_content(li) }
 
-      contents << li.marker << " " unless first_child&.is_list
+      marker = callouts ? %(<#{n+=1}>) : li.marker
+
+      # TODO: the 'unless' check doesn't make sense for COLIST, I don't think
+      # COLIST items can have sub-blocks, but you never know
+      contents << marker << " " unless first_child&.is_list
       contents << sub
 
       numeric = false if li.marker != "."
     end
 
     # if the list is numeric, we need to re-declare default attributes
-    if numeric
+    if numeric || callouts
       # TODO: this is probably more complicated than this - the "default"
       # style probably depends on the nesting...
       cfg = cfg.merge({
@@ -359,7 +367,14 @@ class AsciiDoctorAsciiDocConverter < Asciidoctor::Converter::Base
   end
 
   def convert_colist node
-    'TODO colist'
+    # list of callouts
+    # callouts must be in strict order (1..n), AsciiDoc doesn't tolerate gaps
+    # TODO: callouts are just lists that apply to previous paragraph, which
+    # should be a something that contains callouts.
+    # Also, for callouts, delimiting the previous para would have made a lot of sense
+    # but we would need to know that the next block is COLIST, to force the delimiters,
+    # and we don't do that now.
+    convert_list(node)
   end
 
   def convert_dlist(node)
@@ -524,7 +539,7 @@ class AsciiDoctorAsciiDocConverter < Asciidoctor::Converter::Base
   end
 
   def convert_inline_callout node
-    'TODO inline_callout'
+    unescape(%(<#{node.text}>))
   end
 
   def convert_inline_footnote node
